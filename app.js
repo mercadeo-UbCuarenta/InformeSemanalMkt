@@ -23,8 +23,18 @@ function showToast(message) {
   toast.timer = setTimeout(() => toast.classList.remove("show"), 2400);
 }
 
+function ensureEditableWeek() {
+  const week = content.querySelector('[data-field="semana-informe"]')
+    || content.querySelector(".hero-meta span");
+  if (!week) return;
+  week.classList.add("editable");
+  week.dataset.field = "semana-informe";
+  week.contentEditable = editing ? "true" : "false";
+}
+
 function setEditing(state) {
   editing = state;
+  ensureEditableWeek();
   document.body.classList.toggle("edit-mode", state);
   editLabel.textContent = state ? "Finalizar edición" : "Editar informe";
   editorPanel.classList.toggle("open", state);
@@ -60,6 +70,7 @@ function applyReportPayload(payload, label = "Último guardado") {
   if (!payload?.content) throw new Error("Formato inválido");
   content.innerHTML = payload.content;
   footer.innerHTML = payload.footer || originalFooter;
+  ensureEditableWeek();
   if (payload.updatedAt) {
     const stamp = new Date(payload.updatedAt).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"});
     document.querySelector("#saveStatus").textContent = `${label}: ${stamp}`;
@@ -226,6 +237,7 @@ function importReport(file) {
       if (!payload.content) throw new Error("Formato inválido");
       content.innerHTML = payload.content;
       footer.innerHTML = payload.footer || originalFooter;
+      ensureEditableWeek();
       saveReport(false);
       setEditing(true);
       showToast("Respaldo importado");
@@ -378,6 +390,7 @@ document.addEventListener("keydown", event => {
 
 async function initializeReport() {
   await restoreReport();
+  ensureEditableWeek();
   hydrateGalleryControls();
   applyActionFilters();
 }
