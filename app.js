@@ -37,12 +37,7 @@ function setEditing(state) {
 
 function saveReport(showConfirmation = true) {
   try {
-    const payload = {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      content: content.innerHTML,
-      footer: footer.innerHTML
-    };
+    const payload = createReportPayload();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     const stamp = new Date().toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"});
     document.querySelector("#saveStatus").textContent = `Último guardado: ${stamp}`;
@@ -52,15 +47,42 @@ function saveReport(showConfirmation = true) {
   }
 }
 
-function restoreReport() {
+function createReportPayload() {
+  return {
+    version: 2,
+    updatedAt: new Date().toISOString(),
+    content: content.innerHTML,
+    footer: footer.innerHTML
+  };
+}
+
+function applyReportPayload(payload, label = "Último guardado") {
+  if (!payload?.content) throw new Error("Formato inválido");
+  content.innerHTML = payload.content;
+  footer.innerHTML = payload.footer || originalFooter;
+  if (payload.updatedAt) {
+    const stamp = new Date(payload.updatedAt).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"});
+    document.querySelector("#saveStatus").textContent = `${label}: ${stamp}`;
+  }
+}
+
+async function restoreReport() {
+  if (location.protocol !== "file:") {
+    try {
+      const response = await fetch(`datos-publicados.json?v=${Date.now()}`, {cache:"no-store"});
+      if (response.ok) {
+        applyReportPayload(await response.json(), "Publicación cargada");
+        return;
+      }
+    } catch (error) {
+      // La publicación todavía no tiene un archivo de datos.
+    }
+  }
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return;
   try {
     const payload = JSON.parse(saved);
-    content.innerHTML = payload.content;
-    footer.innerHTML = payload.footer || originalFooter;
-    const stamp = new Date(payload.updatedAt).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"});
-    document.querySelector("#saveStatus").textContent = `Último guardado: ${stamp}`;
+    applyReportPayload(payload);
   } catch (error) {
     localStorage.removeItem(STORAGE_KEY);
   }
@@ -180,6 +202,22 @@ function exportReport() {
   showToast("Respaldo exportado");
 }
 
+function preparePublication() {
+  saveReport(false);
+  const payload = createReportPayload();
+  payload.publication = {
+    generatedFor: "GitHub Pages",
+    repository: "mercadeo-UbCuarenta/InformeSemanalMkt"
+  };
+  const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "datos-publicados.json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast("Archivo para GitHub preparado");
+}
+
 function importReport(file) {
   const reader = new FileReader();
   reader.onload = () => {
@@ -201,6 +239,7 @@ function importReport(file) {
 editToggle.addEventListener("click", () => setEditing(!editing));
 document.querySelector("#closeEditor").addEventListener("click", () => setEditing(false));
 document.querySelector("#saveReport").addEventListener("click", () => saveReport());
+document.querySelector("#preparePublication").addEventListener("click", preparePublication);
 document.querySelector("#exportReport").addEventListener("click", exportReport);
 document.querySelector("#printReport").addEventListener("click", () => window.print());
 document.querySelector("#importReport").addEventListener("change", event => {
@@ -337,9 +376,13 @@ document.addEventListener("keydown", event => {
   if (event.key === "Escape") closePhotoViewer();
 });
 
-restoreReport();
-hydrateGalleryControls();
-applyActionFilters();
+async function initializeReport() {
+  await restoreReport();
+  hydrateGalleryControls();
+  applyActionFilters();
+}
+
+initializeReport();
 window.applyActionFilters = applyActionFilters;
 window.resetActionFilters = resetActionFilters;
 window.hydrateGalleryControls = hydrateGalleryControls;
