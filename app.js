@@ -69,7 +69,8 @@ function createReportPayload() {
       trafficStores: window.reportTrafficStores || [],
       crmData: window.reportCRMData || [],
       selectedTrafficStore: window.selectedTrafficStore || "",
-      storeDetailBrand: window.storeDetailBrand || "all"
+      storeDetailBrand: window.storeDetailBrand || "all",
+      trafficDetailBrand: window.trafficDetailBrand || "all"
     }
   };
 }

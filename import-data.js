@@ -525,7 +525,20 @@
     if (!tbody) return;
     const selected = window.storeDetailBrand || "all";
     const query = normalize(document.querySelector("#storeDetailSearch")?.value || "");
-    const data = (window.reportStoreData || []).filter(item =>
+    const source = window.reportStoreData || [];
+    if (!source.length) {
+      let visible = 0;
+      tbody.querySelectorAll("tr[data-brand]").forEach(row => {
+        const store = normalize(row.querySelector(".store-cell strong")?.textContent || "");
+        const show = (selected === "all" || row.dataset.brand === selected) && (!query || store.includes(query));
+        row.hidden = !show;
+        if (show) visible++;
+      });
+      const count = document.querySelector("#storeDetailCount");
+      if (count) count.textContent = `${visible} tiendas`;
+      return;
+    }
+    const data = source.filter(item =>
       (selected === "all" || item.brand === selected) && (!query || normalize(item.store).includes(query))
     );
     tbody.innerHTML = data.map(item => `<tr data-brand="${item.brand}">
@@ -586,7 +599,19 @@
   function renderDailyTraffic() {
     const tbody = document.querySelector("#dailyTrafficRows");
     if (!tbody) return;
-    const stores = window.reportTrafficStores || [];
+    const allStores = window.reportTrafficStores || [];
+    const brand = window.trafficDetailBrand || "all";
+    const stores = brand === "all" ? allStores : allStores.filter(item => item.brand === brand);
+    const select = document.querySelector("#dailyTrafficStore");
+    if (select) {
+      select.innerHTML = stores.map(item =>
+        `<option value="${escapeHtml(item.key)}">${escapeHtml(item.brand ? `${brandLabels[item.brand] || item.brand} · ${item.store}` : item.store)}</option>`
+      ).join("") || '<option value="">Sin tiendas para esta marca</option>';
+    }
+    if (!stores.some(item => item.key === window.selectedTrafficStore)) {
+      window.selectedTrafficStore = stores[0]?.key || "";
+    }
+    if (select) select.value = window.selectedTrafficStore;
     tbody.innerHTML = stores.map(item => `<tr class="traffic-rank-row${item.key === window.selectedTrafficStore ? " selected" : ""}" data-traffic-store="${escapeHtml(item.key)}" data-brand="${escapeHtml(item.brand)}">
       <td class="store-cell"><strong>${escapeHtml(item.store)}</strong><small>${escapeHtml(brandLabels[item.brand] || item.brand || "Sin clasificar")}</small></td>
       <td>${item.days.length}</td><td>${displayNumber(item.exterior)}</td><td>${displayNumber(item.individual)}</td>
@@ -595,7 +620,15 @@
     const count = document.querySelector("#dailyTrafficCount");
     if (count) count.textContent = `${stores.length} puntos de venta`;
     const selected = stores.find(item => item.key === window.selectedTrafficStore) || stores[0];
-    if (!selected) return;
+    if (!selected) {
+      setText("#trafficExteriorTotal", "—");
+      setText("#trafficIndividualTotal", "—");
+      setText("#trafficConversionAvg", "—");
+      setText("#trafficBestDay", "—");
+      const chart = document.querySelector("#trafficDailyChart");
+      if (chart) chart.innerHTML = '<p class="empty-table">No hay tiendas para esta marca.</p>';
+      return;
+    }
     window.selectedTrafficStore = selected.key;
     setText("#trafficExteriorTotal", displayNumber(selected.exterior));
     setText("#trafficIndividualTotal", displayNumber(selected.individual));
@@ -617,11 +650,31 @@
   }
 
   function restoreRuntimeData(runtime = {}) {
+    if (!document.querySelector(".traffic-brand-filters")) {
+      const controls = document.querySelector(".traffic-dashboard-controls");
+      if (controls) {
+        controls.insertAdjacentHTML("afterend", `<div class="filters traffic-brand-filters" aria-label="Filtrar tráfico por marca">
+          <button type="button" class="traffic-filter active" data-traffic-brand="all">Todas</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="levis">Levi’s Línea</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="levis-outlet">Levi’s Outlet</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="desigual">Desigual</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="wiseman">Wiseman</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="digital">Digital</button>
+        </div>`);
+      }
+    }
     window.reportStoreData = Array.isArray(runtime.storeData) ? runtime.storeData : [];
     window.reportDailyTraffic = Array.isArray(runtime.dailyTraffic) ? runtime.dailyTraffic : [];
     window.reportTrafficStores = Array.isArray(runtime.trafficStores) ? runtime.trafficStores : [];
     window.selectedTrafficStore = runtime.selectedTrafficStore || window.reportTrafficStores[0]?.key || "";
     window.storeDetailBrand = runtime.storeDetailBrand || "all";
+    window.trafficDetailBrand = runtime.trafficDetailBrand || "all";
+    document.querySelectorAll(".detail-filter").forEach(button =>
+      button.classList.toggle("active", button.dataset.detailBrand === window.storeDetailBrand)
+    );
+    document.querySelectorAll(".traffic-filter").forEach(button =>
+      button.classList.toggle("active", button.dataset.trafficBrand === window.trafficDetailBrand)
+    );
     restoreCRMData(runtime.crmData);
     if (window.reportStoreData.length) renderStorePerformance();
     if (window.reportTrafficStores.length) renderDailyTraffic();
@@ -919,6 +972,13 @@
       detailFilter.classList.add("active");
       window.storeDetailBrand = detailFilter.dataset.detailBrand;
       renderStorePerformance();
+    }
+    const trafficFilter = event.target.closest(".traffic-filter");
+    if (trafficFilter) {
+      document.querySelectorAll(".traffic-filter").forEach(button => button.classList.remove("active"));
+      trafficFilter.classList.add("active");
+      window.trafficDetailBrand = trafficFilter.dataset.trafficBrand;
+      renderDailyTraffic();
     }
     const trafficRow = event.target.closest(".traffic-rank-row");
     if (trafficRow) {

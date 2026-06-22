@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
   <header class="topbar">
@@ -233,6 +233,14 @@
             <select id="dailyTrafficStore" class="traffic-store-select"><option value="">Carga el Excel</option></select>
           </label>
           <span class="badge" id="dailyTrafficCount">Sin datos</span>
+        </div>
+        <div class="filters traffic-brand-filters" aria-label="Filtrar tráfico por marca">
+          <button type="button" class="traffic-filter active" data-traffic-brand="all">Todas</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="levis">Levi’s Línea</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="levis-outlet">Levi’s Outlet</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="desigual">Desigual</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="wiseman">Wiseman</button>
+          <button type="button" class="traffic-filter" data-traffic-brand="digital">Digital</button>
         </div>
         <div class="traffic-summary-cards">
           <article><span>Tráfico exterior</span><strong id="trafficExteriorTotal">—</strong></article>
@@ -626,7 +634,7 @@
       <span id="photoViewerMeta"></span>
     </div>
   </div>
-  <script src="import-data.js"></script>
-  <script src="app.js"></script>
+  <script src="import-data.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
