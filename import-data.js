@@ -374,6 +374,16 @@
     return data.length;
   }
 
+  function restoreCRMData(data) {
+    if (!Array.isArray(data) || !data.length) return;
+    window.reportCRMData = data;
+    renderCRMChannelCards(data);
+    window.filterCRMByBrand = brand => {
+      const filtered = brand === "all" ? data : data.filter(row => brandKey(pick(row, "marca")) === brand);
+      renderCRMChannelCards(filtered);
+    };
+  }
+
   const inferBrand = value => brandKey(value);
   const normalizeStore = value => normalize(value)
     .replace(/\bcc\b/g, "").replace(/\bparque\b/g, "").replace(/\bbogota\b/g, "")
@@ -604,6 +614,17 @@
         </div>`;
       }).join("");
     }
+  }
+
+  function restoreRuntimeData(runtime = {}) {
+    window.reportStoreData = Array.isArray(runtime.storeData) ? runtime.storeData : [];
+    window.reportDailyTraffic = Array.isArray(runtime.dailyTraffic) ? runtime.dailyTraffic : [];
+    window.reportTrafficStores = Array.isArray(runtime.trafficStores) ? runtime.trafficStores : [];
+    window.selectedTrafficStore = runtime.selectedTrafficStore || window.reportTrafficStores[0]?.key || "";
+    window.storeDetailBrand = runtime.storeDetailBrand || "all";
+    restoreCRMData(runtime.crmData);
+    if (window.reportStoreData.length) renderStorePerformance();
+    if (window.reportTrafficStores.length) renderDailyTraffic();
   }
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
@@ -907,10 +928,16 @@
       renderDailyTraffic();
     }
   });
-  document.querySelector("#storeDetailSearch")?.addEventListener("input", renderStorePerformance);
-  document.querySelector("#dailyTrafficStore")?.addEventListener("change", event => {
+  document.addEventListener("input", event => {
+    if (event.target.matches("#storeDetailSearch")) renderStorePerformance();
+  });
+  document.addEventListener("change", event => {
+    if (!event.target.matches("#dailyTrafficStore")) return;
     window.selectedTrafficStore = event.target.value;
     renderDailyTraffic();
   });
-  window.ReportImporter = {importExcel, importPowerPoint, unzip, parseWorkbook, applySalesTrafficFormat, applyDailyTraffic};
+  window.ReportImporter = {
+    importExcel, importPowerPoint, unzip, parseWorkbook, applySalesTrafficFormat,
+    applyDailyTraffic, renderStorePerformance, renderDailyTraffic, restoreRuntimeData
+  };
 })();

@@ -59,10 +59,18 @@ function saveReport(showConfirmation = true) {
 
 function createReportPayload() {
   return {
-    version: 2,
+    version: 3,
     updatedAt: new Date().toISOString(),
     content: content.innerHTML,
-    footer: footer.innerHTML
+    footer: footer.innerHTML,
+    runtime: {
+      storeData: window.reportStoreData || [],
+      dailyTraffic: window.reportDailyTraffic || [],
+      trafficStores: window.reportTrafficStores || [],
+      crmData: window.reportCRMData || [],
+      selectedTrafficStore: window.selectedTrafficStore || "",
+      storeDetailBrand: window.storeDetailBrand || "all"
+    }
   };
 }
 
@@ -71,6 +79,7 @@ function applyReportPayload(payload, label = "Último guardado") {
   content.innerHTML = payload.content;
   footer.innerHTML = payload.footer || originalFooter;
   ensureEditableWeek();
+  window.ReportImporter?.restoreRuntimeData?.(payload.runtime || {});
   if (payload.updatedAt) {
     const stamp = new Date(payload.updatedAt).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"});
     document.querySelector("#saveStatus").textContent = `${label}: ${stamp}`;
