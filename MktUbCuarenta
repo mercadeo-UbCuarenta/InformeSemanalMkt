@@ -1,0 +1,2108 @@
+const STORAGE_KEY = "ub40-marketing-report-v9";
+const content = document.querySelector("#editableContent");
+const footer = document.querySelector("footer");
+const editToggle = document.querySelector("#editToggle");
+const editLabel = document.querySelector("#editLabel");
+const editorPanel = document.querySelector("#editorPanel");
+const imagePicker = document.querySelector("#imagePicker");
+const galleryPicker = document.querySelector("#galleryPicker");
+const toast = document.querySelector("#toast");
+const photoViewer = document.querySelector("#photoViewer");
+let editing = false;
+let activeImage = null;
+let activeGalleryCard = null;
+let saveTimer;
+const actionFilters = {brand:"all"};
+const originalContent = content.innerHTML;
+const originalFooter = footer.innerHTML;
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => toast.classList.remove("show"), 2400);
+}
+
+function setEditing(state) {
+  editing = state;
+  document.body.classList.toggle("edit-mode", state);
+  editLabel.textContent = state ? "Finalizar edición" : "Editar informe";
+  editorPanel.classList.toggle("open", state);
+  editorPanel.setAttribute("aria-hidden", String(!state));
+  document.querySelectorAll(".editable").forEach(el => {
+    el.contentEditable = state ? "true" : "false";
+  });
+  if (!state) saveReport();
+}
+
+function saveReport(showConfirmation = true) {
+  try {
+    const payload = {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      content: content.innerHTML,
+      footer: footer.innerHTML
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    const stamp = new Date().toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"});
+    document.querySelector("#saveStatus").textContent = `Último guardado: ${stamp}`;
+    if (showConfirmation) showToast("Informe guardado");
+  } catch (error) {
+    showToast("No fue posible guardar. Reduce el tamaño de las fotos.");
+  }
+}
+
+function restoreReport() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return;
+  try {
+    const payload = JSON.parse(saved);
+    content.innerHTML = payload.content;
+    footer.innerHTML = payload.footer || originalFooter;
+    const stamp = new Date(payload.updatedAt).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"});
+    document.querySelector("#saveStatus").textContent = `Último guardado: ${stamp}`;
+  } catch (error) {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+function queueSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveReport(false), 700);
+}
+
+function applyActionFilters() {
+  let visible = 0;
+  document.querySelectorAll(".evidence-card").forEach(card => {
+    const brandMatch = actionFilters.brand === "all" || card.dataset.brand === actionFilters.brand;
+    const show = brandMatch;
+    card.classList.toggle("hidden", !show);
+    if (show) visible++;
+  });
+  document.querySelectorAll("#crmBrandRows tr, #crmCampaignRows tr").forEach(row => {
+    if (!row.dataset.brand) return;
+    row.hidden = actionFilters.brand !== "all" && row.dataset.brand !== actionFilters.brand;
+  });
+  window.filterCRMByBrand?.(actionFilters.brand);
+  const result = document.querySelector("#filterResult");
+  if (result) result.textContent = `${visible} ${visible === 1 ? "acción visible" : "acciones visibles"} · CRM filtrado por marca`;
+}
+
+function resetActionFilters() {
+  actionFilters.brand = "all";
+  document.querySelectorAll(".filter").forEach(button => {
+    button.classList.toggle("active", button.dataset.filter === "all");
+  });
+  applyActionFilters();
+}
+
+function openPhotoViewer(image) {
+  const card = image.closest(".evidence-card");
+  document.querySelector("#photoViewerImage").src = image.src;
+  document.querySelector("#photoViewerImage").alt = image.alt;
+  document.querySelector("#photoViewerTitle").textContent = card?.querySelector("h3")?.textContent || image.alt;
+  document.querySelector("#photoViewerMeta").textContent = [
+    card?.querySelector(".card-brand")?.textContent,
+    card?.querySelector(".card-action-type")?.textContent
+  ].filter(Boolean).join(" · ");
+  photoViewer.classList.add("open");
+  photoViewer.setAttribute("aria-hidden", "false");
+}
+
+function closePhotoViewer() {
+  photoViewer.classList.remove("open");
+  photoViewer.setAttribute("aria-hidden", "true");
+}
+
+function compressImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = event => {
+    const image = new Image();
+    image.onload = () => {
+      const max = 1600;
+      const scale = Math.min(1, max / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      callback(canvas.toDataURL("image/jpeg", .82));
+    };
+    image.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function syncGalleryMainImage(card, thumb) {
+  const main = card.querySelector(".replaceable-image");
+  const image = thumb.querySelector("img");
+  if (!main || !image) return;
+  main.src = image.src;
+  main.alt = image.alt;
+  card.querySelectorAll(".gallery-thumb").forEach(item => item.classList.toggle("active", item === thumb));
+}
+
+function addGalleryImage(card, dataUrl, alt) {
+  const gallery = card.querySelector(".evidence-gallery");
+  const addButton = gallery.querySelector(".add-gallery-images");
+  const thumb = document.createElement("button");
+  thumb.className = "gallery-thumb";
+  thumb.type = "button";
+  thumb.innerHTML = `<img src="${dataUrl}" alt="${alt.replace(/"/g, "&quot;")}"><span class="remove-gallery-image" aria-label="Eliminar foto">×</span>`;
+  gallery.insertBefore(thumb, addButton);
+  return thumb;
+}
+
+function hydrateGalleryControls(root = document) {
+  root.querySelectorAll(".gallery-thumb").forEach(thumb => {
+    if (!thumb.querySelector(".remove-gallery-image")) {
+      const remove = document.createElement("span");
+      remove.className = "remove-gallery-image";
+      remove.setAttribute("aria-label", "Eliminar foto");
+      remove.textContent = "×";
+      thumb.appendChild(remove);
+    }
+  });
+}
+
+function exportReport() {
+  const payload = localStorage.getItem(STORAGE_KEY) || JSON.stringify({
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    content: content.innerHTML,
+    footer: footer.innerHTML
+  });
+  const blob = new Blob([payload], {type:"application/json"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `informe-marketing-${new Date().toISOString().slice(0,10)}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast("Respaldo exportado");
+}
+
+function importReport(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const payload = JSON.parse(reader.result);
+      if (!payload.content) throw new Error("Formato inválido");
+      content.innerHTML = payload.content;
+      footer.innerHTML = payload.footer || originalFooter;
+      saveReport(false);
+      setEditing(true);
+      showToast("Respaldo importado");
+    } catch (error) {
+      showToast("El archivo no es un respaldo válido");
+    }
+  };
+  reader.readAsText(file);
+}
+
+editToggle.addEventListener("click", () => setEditing(!editing));
+document.querySelector("#closeEditor").addEventListener("click", () => setEditing(false));
+document.querySelector("#saveReport").addEventListener("click", () => saveReport());
+document.querySelector("#exportReport").addEventListener("click", exportReport);
+document.querySelector("#printReport").addEventListener("click", () => window.print());
+document.querySelector("#importReport").addEventListener("change", event => {
+  if (event.target.files[0]) importReport(event.target.files[0]);
+  event.target.value = "";
+});
+document.querySelector("#resetReport").addEventListener("click", () => {
+  if (!confirm("¿Restaurar el informe de ejemplo? Se perderán los cambios guardados en este navegador.")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  content.innerHTML = originalContent;
+  footer.innerHTML = originalFooter;
+  setEditing(true);
+  showToast("Ejemplo restaurado");
+});
+
+document.addEventListener("input", event => {
+  if (editing && event.target.closest(".editable")) queueSave();
+});
+
+document.addEventListener("click", event => {
+  const addButton = event.target.closest("#addEvidence");
+  if (editing && addButton) {
+    const template = document.querySelector("#evidenceTemplate");
+    const card = template.content.firstElementChild.cloneNode(true);
+    document.querySelector("#evidenceGrid").appendChild(card);
+    hydrateGalleryControls(card);
+    card.scrollIntoView({behavior:"smooth", block:"center"});
+    card.querySelector("h3").focus();
+    applyActionFilters();
+    queueSave();
+    return;
+  }
+
+  const filter = event.target.closest(".filter");
+  if (filter) {
+    document.querySelectorAll('.filter[data-filter-group="brand"]').forEach(button => button.classList.remove("active"));
+    filter.classList.add("active");
+    actionFilters.brand = filter.dataset.filter;
+    applyActionFilters();
+  }
+
+  const image = event.target.closest(".replaceable-image");
+  if (image) {
+    if (editing) {
+      activeImage = image;
+      imagePicker.click();
+    } else {
+      openPhotoViewer(image);
+    }
+  }
+
+  const galleryThumb = event.target.closest(".gallery-thumb");
+  if (galleryThumb && !event.target.closest(".remove-gallery-image")) {
+    const card = galleryThumb.closest(".evidence-card");
+    syncGalleryMainImage(card, galleryThumb);
+    if (!editing) openPhotoViewer(card.querySelector(".replaceable-image"));
+  }
+
+  const addGalleryButton = event.target.closest(".add-gallery-images");
+  if (editing && addGalleryButton) {
+    activeGalleryCard = addGalleryButton.closest(".evidence-card");
+    galleryPicker.click();
+  }
+
+  const removeGalleryButton = event.target.closest(".remove-gallery-image");
+  if (editing && removeGalleryButton) {
+    const thumb = removeGalleryButton.closest(".gallery-thumb");
+    const card = thumb.closest(".evidence-card");
+    const wasActive = thumb.classList.contains("active");
+    thumb.remove();
+    if (wasActive) {
+      const remaining = card.querySelector(".gallery-thumb");
+      if (remaining) syncGalleryMainImage(card, remaining);
+    }
+    saveReport(false);
+    showToast("Fotografía eliminada");
+  }
+
+  if (event.target.closest(".photo-viewer-close") || event.target === photoViewer) closePhotoViewer();
+
+  const deleteButton = event.target.closest(".delete-card");
+  if (editing && deleteButton) {
+    if (confirm("¿Eliminar esta evidencia?")) {
+      deleteButton.closest(".evidence-card").remove();
+      applyActionFilters();
+      saveReport(false);
+      showToast("Evidencia eliminada");
+    }
+  }
+});
+
+imagePicker.addEventListener("change", () => {
+  const file = imagePicker.files[0];
+  if (!file || !activeImage) return;
+  compressImage(file, dataUrl => {
+    activeImage.src = dataUrl;
+    activeImage.alt = file.name.replace(/\.[^.]+$/, "");
+    const card = activeImage.closest(".evidence-card");
+    const activeThumb = card?.querySelector(".gallery-thumb.active img");
+    if (activeThumb) {
+      activeThumb.src = dataUrl;
+      activeThumb.alt = activeImage.alt;
+    }
+    saveReport(false);
+    showToast("Imagen actualizada");
+    activeImage = null;
+  });
+  imagePicker.value = "";
+});
+
+galleryPicker.addEventListener("change", () => {
+  const files = Array.from(galleryPicker.files || []);
+  if (!files.length || !activeGalleryCard) return;
+  let completed = 0;
+  files.forEach(file => {
+    compressImage(file, dataUrl => {
+      const thumb = addGalleryImage(activeGalleryCard, dataUrl, file.name.replace(/\.[^.]+$/, ""));
+      completed++;
+      if (completed === files.length) {
+        syncGalleryMainImage(activeGalleryCard, thumb);
+        saveReport(false);
+        showToast(`${files.length} ${files.length === 1 ? "foto agregada" : "fotos agregadas"}`);
+        activeGalleryCard = null;
+      }
+    });
+  });
+  galleryPicker.value = "";
+});
+
+window.addEventListener("beforeunload", () => {
+  if (editing) saveReport(false);
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") closePhotoViewer();
+});
+
+restoreReport();
+hydrateGalleryControls();
+applyActionFilters();
+window.applyActionFilters = applyActionFilters;
+window.resetActionFilters = resetActionFilters;
+window.hydrateGalleryControls = hydrateGalleryControls;
+
+(() => {
+  const textDecoder = new TextDecoder("utf-8");
+  const brandLabels = {
+    levis:"Levi’s Línea",
+    "levis-outlet":"Levi’s Outlet",
+    desigual:"Desigual",
+    wiseman:"Wiseman",
+    digital:"Digital"
+  };
+
+  const normalize = value => String(value ?? "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+  const xml = source => new DOMParser().parseFromString(source, "application/xml");
+  const elements = (node, localName) => Array.from(node.getElementsByTagName("*")).filter(item => item.localName === localName);
+  const firstText = (node, localName) => elements(node, localName)[0]?.textContent ?? "";
+  const setText = (selector, value) => {
+    if (value === undefined || value === null || value === "") return;
+    const target = document.querySelector(selector);
+    if (target) target.textContent = value;
+  };
+  const number = value => {
+    if (typeof value === "number") return value;
+    const clean = String(value ?? "").replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
+    const parsed = Number(clean);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const displayNumber = value => typeof value === "number" ? value.toLocaleString("es-CO") : String(value ?? "—");
+  const displayMoney = value => {
+    if (typeof value !== "number") return String(value ?? "—");
+    if (Math.abs(value) >= 1000000) return `$${(value / 1000000).toLocaleString("es-CO", {maximumFractionDigits:1})}M`;
+    return value.toLocaleString("es-CO", {style:"currency", currency:"COP", maximumFractionDigits:0});
+  };
+  const displayPercent = value => {
+    if (typeof value !== "number") {
+      const text = String(value ?? "—");
+      return text.includes("%") ? text : text;
+    }
+    const percentage = Math.abs(value) <= 10 ? value * 100 : value;
+    return `${percentage.toLocaleString("es-CO", {maximumFractionDigits:1})}%`;
+  };
+  const compliancePill = value => {
+    const ratio = number(value);
+    const met = ratio >= 1;
+    return `<span class="compliance-pill ${met ? "met" : "missed"}"><i></i>${displayPercent(ratio)}</span>`;
+  };
+  const setCompliancePill = (selector, value) => {
+    const target = document.querySelector(selector);
+    if (!target) return;
+    const ratio = number(value);
+    const met = ratio >= 1;
+    target.className = `compliance-pill ${met ? "met" : "missed"}`;
+    target.innerHTML = `<i></i>${displayPercent(ratio)}`;
+  };
+  const displayDate = value => {
+    if (typeof value === "number" && value > 30000) {
+      const date = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
+      return date.toLocaleDateString("es-CO", {day:"2-digit", month:"short", year:"numeric", timeZone:"UTC"});
+    }
+    return String(value ?? "—");
+  };
+  const parseCurrency = value => {
+    if (typeof value === "number") return value;
+    const clean = String(value ?? "").replace(/[^\d,-]/g, "").replace(/\./g, "").replace(",", ".");
+    const parsed = Number(clean);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const brandKey = value => {
+    const key = normalize(value);
+    if (key.includes("levi") && key.includes("outlet")) return "levis-outlet";
+    if (key.includes("levi")) return "levis";
+    if (key.includes("desigual")) return "desigual";
+    if (key.includes("wiseman")) return "wiseman";
+    if (key.includes("digital") || key.includes("ecommerce")) return "digital";
+    return key.replace(/\s/g, "-");
+  };
+  const channelKey = value => {
+    const key = normalize(value);
+    if (key.includes("whatsapp")) return "whatsapp";
+    if (key.includes("sms")) return "sms";
+    if (key.includes("email") || key.includes("mail")) return "email";
+    return key;
+  };
+  const rowObject = (headers, row) => Object.fromEntries(headers.map((header, index) => [normalize(header), row[index] ?? ""]));
+  const pick = (row, ...names) => {
+    for (const name of names) {
+      const value = row[normalize(name)];
+      if (value !== undefined && value !== "") return value;
+    }
+    return "";
+  };
+
+  async function inflateRaw(bytes) {
+    if (!("DecompressionStream" in window)) throw new Error("El navegador no permite descomprimir archivos Office.");
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  async function unzip(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    const view = new DataView(arrayBuffer);
+    let eocd = -1;
+    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
+      if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error("El archivo Office no tiene una estructura válida.");
+    const count = view.getUint16(eocd + 10, true);
+    let cursor = view.getUint32(eocd + 16, true);
+    const files = new Map();
+    for (let index = 0; index < count; index++) {
+      if (view.getUint32(cursor, true) !== 0x02014b50) break;
+      const method = view.getUint16(cursor + 10, true);
+      const compressedSize = view.getUint32(cursor + 20, true);
+      const nameLength = view.getUint16(cursor + 28, true);
+      const extraLength = view.getUint16(cursor + 30, true);
+      const commentLength = view.getUint16(cursor + 32, true);
+      const localOffset = view.getUint32(cursor + 42, true);
+      const name = textDecoder.decode(bytes.slice(cursor + 46, cursor + 46 + nameLength)).replace(/\\/g, "/");
+      const localNameLength = view.getUint16(localOffset + 26, true);
+      const localExtraLength = view.getUint16(localOffset + 28, true);
+      const dataStart = localOffset + 30 + localNameLength + localExtraLength;
+      const compressed = bytes.slice(dataStart, dataStart + compressedSize);
+      let data;
+      if (method === 0) data = compressed;
+      else if (method === 8) data = await inflateRaw(compressed);
+      else throw new Error(`Compresión Office no compatible (${method}).`);
+      files.set(name, data);
+      cursor += 46 + nameLength + extraLength + commentLength;
+    }
+    return files;
+  }
+
+  function parseSharedStrings(files) {
+    const data = files.get("xl/sharedStrings.xml");
+    if (!data) return [];
+    return elements(xml(textDecoder.decode(data)), "si").map(item =>
+      elements(item, "t").map(text => text.textContent).join("")
+    );
+  }
+
+  function parseWorksheet(data, sharedStrings) {
+    const doc = xml(textDecoder.decode(data));
+    const rows = [];
+    for (const cell of elements(doc, "c")) {
+      const reference = cell.getAttribute("r") || "";
+      const letters = reference.match(/[A-Z]+/i)?.[0] || "A";
+      let column = 0;
+      for (const char of letters.toUpperCase()) column = column * 26 + char.charCodeAt(0) - 64;
+      column -= 1;
+      const rowIndex = Math.max(0, Number(reference.match(/\d+/)?.[0] || 1) - 1);
+      rows[rowIndex] ||= [];
+      const type = cell.getAttribute("t");
+      let value = firstText(cell, "v");
+      if (type === "s") value = sharedStrings[Number(value)] ?? "";
+      else if (type === "inlineStr") value = elements(cell, "t").map(item => item.textContent).join("");
+      else if (type === "b") value = value === "1";
+      else if (value !== "" && Number.isFinite(Number(value))) value = Number(value);
+      rows[rowIndex][column] = value;
+    }
+    return rows;
+  }
+
+  function parseWorkbook(files) {
+    const workbook = xml(textDecoder.decode(files.get("xl/workbook.xml")));
+    const rels = xml(textDecoder.decode(files.get("xl/_rels/workbook.xml.rels")));
+    const targets = new Map(elements(rels, "Relationship").map(rel => [rel.getAttribute("Id"), rel.getAttribute("Target")]));
+    const shared = parseSharedStrings(files);
+    const result = {};
+    for (const sheet of elements(workbook, "sheet")) {
+      const name = sheet.getAttribute("name");
+      const relationshipId = sheet.getAttribute("r:id") || sheet.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+      let target = targets.get(relationshipId) || "";
+      target = target.replace(/^\/?xl\//, "").replace(/^\/?/, "");
+      const path = `xl/${target}`.replace(/\/+/g, "/");
+      const data = files.get(path);
+      if (data) result[name] = parseWorksheet(data, shared);
+    }
+    return result;
+  }
+
+  function sheetByName(workbook, wanted) {
+    const target = normalize(wanted);
+    const name = Object.keys(workbook).find(item => normalize(item) === target || normalize(item).includes(target));
+    return name ? workbook[name] : [];
+  }
+
+  function applySummary(rows) {
+    const values = {};
+    rows.slice(1).forEach(row => values[normalize(row[0])] = row[1]);
+    const mappings = {
+      "periodo":"periodo",
+      "ventas semana":"ventas-semana",
+      "variacion compania":"variacion-compania",
+      "variacion semana":"variacion-semana",
+      "meta semana":"meta-semana",
+      "cumplimiento meta":"cumplimiento-meta",
+      "trafico semana":"trafico-semana",
+      "cumplimiento trafico":"cumplimiento-trafico",
+      "cumplimiento mes":"cumplimiento-mes",
+      "brecha meta":"brecha-meta"
+    };
+    for (const [source, field] of Object.entries(mappings)) {
+      const raw = values[source];
+      if (raw === undefined || raw === "") continue;
+      const formatted = source.includes("ventas") || source.includes("meta") || source.includes("brecha")
+        ? displayMoney(raw) : source.includes("cumplimiento") || source.includes("variacion") ? displayPercent(raw) : displayNumber(raw);
+      setText(`[data-field="${field}"]`, formatted);
+    }
+    if (values["meta trafico"]) {
+      const actual = displayNumber(values["trafico semana"]);
+      setText('[data-field="trafico-meta"]', `${actual} / ${displayNumber(values["meta trafico"])}`);
+    }
+    if (values["resumen ejecutivo"]) setText("#resumen .section-intro", values["resumen ejecutivo"]);
+    if (values["foco proxima semana"]) setText(".closing-note p", values["foco proxima semana"]);
+    const progress = number(values["cumplimiento meta"]);
+    if (progress) {
+      const percentage = Math.abs(progress) <= 1 ? progress * 100 : progress;
+      const radial = document.querySelector(".radial");
+      if (radial) radial.style.setProperty("--progress", percentage);
+      setText('[data-field="cumplimiento-radial"]', displayPercent(progress));
+    }
+    const trafficProgress = number(values["cumplimiento trafico"]);
+    if (trafficProgress) {
+      const percentage = Math.abs(trafficProgress) <= 1 ? trafficProgress * 100 : trafficProgress;
+      const bar = document.querySelector(".traffic-bar .bar i");
+      if (bar) bar.style.width = `${Math.min(100, percentage)}%`;
+    }
+  }
+
+  function applyBrands(rows) {
+    if (rows.length < 2) return 0;
+    const headers = rows[0];
+    let updated = 0;
+    rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).forEach(raw => {
+      const row = rowObject(headers, raw);
+      const key = brandKey(pick(row, "marca"));
+      if (!key) return;
+      const salesRow = document.querySelector(`.sales-panel tbody tr[data-brand="${key}"]`);
+      if (salesRow) {
+        const salesPrevious = number(pick(row, "ventas 2025", "ventas anterior"));
+        const salesCurrent = number(pick(row, "ventas 2026", "ventas actual"));
+        setText(`[data-brand="${key}"] [data-col="ventas-anterior"]`, displayMoney(salesPrevious));
+        setText(`[data-brand="${key}"] [data-col="ventas-actual"]`, displayMoney(salesCurrent));
+        setCompliancePill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, salesPrevious ? salesCurrent / salesPrevious : 0);
+      }
+      const focus = document.querySelector(`.brand-focus [data-brand="${key}"]`);
+      if (focus) {
+        const ticket = pick(row, "ticket promedio", "ticket");
+        const repurchase = pick(row, "tasa de recompra", "recompra");
+        if (ticket !== "") focus.querySelector('[data-metric="ticket-promedio"]').textContent = displayMoney(ticket);
+        if (repurchase !== "") focus.querySelector('[data-metric="tasa-recompra"]').textContent = displayPercent(repurchase);
+      }
+      const analysis = document.querySelector(`.brand-analysis [data-brand="${key}"]`);
+      if (analysis) {
+        const variation = pick(row, "variacion", "variación");
+        if (variation !== "") analysis.querySelector('[data-metric="variacion"]').textContent = displayPercent(variation);
+        const title = pick(row, "titular gerencial", "titular");
+        const reading = pick(row, "lectura gerencial", "lectura");
+        if (title) analysis.querySelector('[data-metric="titular"]').textContent = title;
+        if (reading) analysis.querySelector('[data-metric="lectura"]').textContent = reading;
+      }
+      updated++;
+    });
+    return updated;
+  }
+
+  function weightedRate(rows, rateNames, weightNames) {
+    let weighted = 0, weights = 0;
+    rows.forEach(row => {
+      const rate = number(pick(row, ...rateNames));
+      const weight = number(pick(row, ...weightNames)) || 1;
+      if (rate) { weighted += (Math.abs(rate) <= 1 ? rate : rate / 100) * weight; weights += weight; }
+    });
+    return weights ? weighted / weights : 0;
+  }
+
+  function renderCRMChannelCards(data) {
+    ["email", "sms", "whatsapp"].forEach(channel => {
+      const channelRows = data.filter(row => channelKey(pick(row, "canal")) === channel);
+      const card = document.querySelector(`.crm-channel[data-channel="${channel}"]`);
+      if (!card) return;
+      card.classList.toggle("channel-empty", !channelRows.length);
+      if (!channelRows.length) {
+        card.querySelectorAll("[data-metric]").forEach(metric => metric.textContent = "—");
+        return;
+      }
+      const hasMetrics = channelRows.some(row => ["enviados", "entregados", "apertura", "ctr", "leidos", "respuestas", "conversiones", "bajas"]
+        .some(metric => pick(row, metric) !== ""));
+      if (!hasMetrics) return;
+      const sum = (...names) => channelRows.reduce((total, row) => total + number(pick(row, ...names)), 0);
+      const sent = sum("enviados", "mensajes enviados");
+      const delivered = sum("entregados");
+      card.querySelector('[data-metric="enviados"]').textContent = displayNumber(sent);
+      const deliveredTarget = card.querySelector('[data-metric="entregados"]');
+      if (deliveredTarget) deliveredTarget.textContent = displayNumber(delivered);
+      const rateDelivery = sent ? delivered / sent : weightedRate(channelRows, ["tasa entrega"], ["enviados"]);
+      const deliveryTarget = card.querySelector('[data-metric="tasa-entrega"]');
+      if (deliveryTarget) deliveryTarget.textContent = displayPercent(rateDelivery);
+      const aperture = card.querySelector('[data-metric="apertura"]');
+      if (aperture) aperture.textContent = displayPercent(weightedRate(channelRows, ["apertura", "tasa apertura"], ["entregados", "enviados"]));
+      const ctr = card.querySelector('[data-metric="ctr"]');
+      if (ctr) ctr.textContent = displayPercent(weightedRate(channelRows, ["ctr", "ctor", "tasa clics"], ["entregados", "enviados"]));
+      const read = card.querySelector('[data-metric="leidos"]');
+      if (read) read.textContent = displayPercent(weightedRate(channelRows, ["leidos", "tasa lectura"], ["entregados", "enviados"]));
+      const responses = card.querySelector('[data-metric="respuestas"]');
+      if (responses) responses.textContent = displayNumber(sum("respuestas", "clics respuesta", "clics"));
+      const conversions = card.querySelector('[data-metric="conversiones"]');
+      if (conversions) conversions.textContent = displayNumber(sum("conversiones"));
+      const unsubscribes = card.querySelector('[data-metric="bajas"]');
+      if (unsubscribes) unsubscribes.textContent = displayNumber(sum("bajas"));
+      const conversionRate = card.querySelector('[data-metric="conversion-rate"]');
+      if (conversionRate) conversionRate.textContent = displayPercent(weightedRate(channelRows, ["conversion", "conversión"], ["enviados"]));
+      const bounce = card.querySelector('[data-metric="bounce"]');
+      if (bounce) bounce.textContent = displayPercent(weightedRate(channelRows, ["tasa rebote", "rebote"], ["enviados"]));
+      const transactions = card.querySelector('[data-metric="transactions"]');
+      if (transactions) transactions.textContent = displayNumber(
+        channelRows.reduce((total, row) => total + number(pick(row, "transacciones online")) + number(pick(row, "transacciones offline")), 0)
+      );
+      const revenue = card.querySelector('[data-metric="revenue"]');
+      if (revenue) revenue.textContent = displayMoney(
+        channelRows.reduce((total, row) => total + parseCurrency(pick(row, "ingresos online")) + parseCurrency(pick(row, "ingresos offline")), 0)
+      );
+    });
+  }
+
+  function applyCRM(rows) {
+    if (rows.length < 2) return 0;
+    const headers = rows[0];
+    const data = rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).map(row => rowObject(headers, row));
+    window.reportCRMData = data;
+    renderCRMChannelCards(data);
+    window.filterCRMByBrand = brand => {
+      const filtered = brand === "all" ? data : data.filter(row => brandKey(pick(row, "marca")) === brand);
+      renderCRMChannelCards(filtered);
+    };
+
+    const tbody = document.querySelector("#crmBrandRows");
+    if (tbody) {
+      tbody.innerHTML = ["levis", "levis-outlet", "desigual", "wiseman"].map(brand => {
+        const brandRows = data.filter(row => brandKey(pick(row, "marca")) === brand);
+        const channelSummary = channel => {
+          const selected = brandRows.filter(row => channelKey(pick(row, "canal")) === channel);
+          if (!selected.length) return "—";
+          const sent = selected.reduce((total, row) => total + number(pick(row, "enviados")), 0);
+          return `${selected.length} ${selected.length === 1 ? "acción" : "acciones"}${sent ? ` · ${displayNumber(sent)}` : ""}`;
+        };
+        const base = brandRows.reduce((total, row) => total + number(pick(row, "base impactada", "enviados")), 0);
+        const highlight = brandRows.map(row => pick(row, "resultado destacado", "campana", "campaña")).filter(Boolean).join(" · ") || "—";
+        return `<tr data-brand="${brand}"><td>${brandLabels[brand]}</td><td>${channelSummary("email")}</td><td>${channelSummary("sms")}</td><td>${channelSummary("whatsapp")}</td><td>${displayNumber(base)}</td><td>${escapeHtml(highlight)}</td></tr>`;
+      }).join("");
+    }
+    const campaignBody = document.querySelector("#crmCampaignRows");
+    if (campaignBody) {
+      campaignBody.innerHTML = data.map(row => {
+        const onlineTransactions = number(pick(row, "transacciones online"));
+        const offlineTransactions = number(pick(row, "transacciones offline"));
+        const onlineRevenue = parseCurrency(pick(row, "ingresos online"));
+        const offlineRevenue = parseCurrency(pick(row, "ingresos offline"));
+        return `<tr data-brand="${brandKey(pick(row, "marca"))}">
+          <td>${escapeHtml(pick(row, "marca") || "—")}</td>
+          <td>${escapeHtml(pick(row, "canal") || "—")}</td>
+          <td>${escapeHtml(pick(row, "campana", "campaña") || "—")}</td>
+          <td>${escapeHtml(displayDate(pick(row, "fecha envio", "fecha envío")))}</td>
+          <td>${displayNumber(number(pick(row, "enviados")))}</td>
+          <td>${displayPercent(pick(row, "apertura"))}</td>
+          <td>${displayPercent(pick(row, "ctor", "ctr"))}</td>
+          <td>${displayPercent(pick(row, "conversion", "conversión"))}</td>
+          <td>${displayNumber(onlineTransactions + offlineTransactions)}</td>
+          <td>${displayMoney(onlineRevenue + offlineRevenue)}</td>
+        </tr>`;
+      }).join("") || '<tr><td colspan="10" class="empty-table">Sin campañas CRM.</td></tr>';
+    }
+    return data.length;
+  }
+
+  const inferBrand = value => brandKey(value);
+  const normalizeStore = value => normalize(value)
+    .replace(/\bcc\b/g, "").replace(/\bparque\b/g, "").replace(/\bbogota\b/g, "")
+    .replace(/\bcanal\b/g, "").replace(/\s+/g, " ").trim();
+
+  function applySalesTrafficFormat(salesRows, trafficRows) {
+    if (salesRows.length < 6 || trafficRows.length < 6) return {brands:0, stores:0};
+    const salesDetailHeader = salesRows.findIndex(row => normalize(row[0]) === "marca" && normalize(row[1]) === "ventas");
+    const trafficDetailHeader = trafficRows.findIndex(row => normalize(row[0]) === "trafico" && number(row[1]) === 2025);
+    const salesSummaryEnd = salesRows.slice(1).findIndex(row => !row[1]);
+    const trafficSummaryEnd = trafficRows.slice(1).findIndex(row => !row[0]);
+    const salesSummary = salesRows.slice(1, salesSummaryEnd < 0 ? 6 : salesSummaryEnd + 1);
+    const trafficSummary = trafficRows.slice(1, trafficSummaryEnd < 0 ? 6 : trafficSummaryEnd + 1);
+    const salesSummaryMap = new Map(salesSummary.map(row => {
+      const label = normalize(row[1]);
+      return [label === "levis" ? "levis-combined" : brandKey(row[1]), row];
+    }));
+    const trafficSummaryMap = new Map(trafficSummary.map(row => {
+      const label = normalize(row[0]);
+      return [label === "levis" ? "levis-combined" : brandKey(row[0]), row];
+    }));
+    const totalSales = salesSummaryMap.get("total");
+    const totalTraffic = trafficSummaryMap.get("total");
+    if (totalSales) {
+      setText('[data-field="ventas-semana"]', displayMoney(number(totalSales[3])));
+      setText('[data-field="variacion-compania"]', displayPercent(totalSales[4]));
+      setText('[data-field="variacion-semana"]', displayPercent(totalSales[4]));
+      setText('[data-field="meta-semana"]', displayMoney(number(totalSales[6])));
+      setText('[data-field="cumplimiento-meta"]', displayPercent(totalSales[7]));
+      setText('[data-field="cumplimiento-radial"]', displayPercent(totalSales[7]));
+      setText('[data-field="ticket-compania"]', displayMoney(number(totalSales[5])));
+      setText('[data-field="brecha-meta"]', displayMoney(Math.max(0, number(totalSales[6]) - number(totalSales[3]))));
+      setText('.sales-panel tfoot [data-col="ventas-anterior"]', displayMoney(number(totalSales[2])));
+      setText('.sales-panel tfoot [data-col="ventas-actual"]', displayMoney(number(totalSales[3])));
+      setCompliancePill('.sales-panel tfoot [data-col="variacion"]', number(totalSales[2]) ? number(totalSales[3]) / number(totalSales[2]) : 0);
+      const radial = document.querySelector(".radial");
+      if (radial) radial.style.setProperty("--progress", Math.min(100, number(totalSales[7]) * 100));
+    }
+    if (totalTraffic) {
+      setText('[data-field="trafico-semana"]', displayNumber(number(totalTraffic[2])));
+      setText('[data-field="cumplimiento-trafico"]', displayPercent(totalTraffic[5]));
+      setText('[data-field="trafico-meta"]', `${displayNumber(number(totalTraffic[2]))} / ${displayNumber(number(totalTraffic[4]))}`);
+      const bar = document.querySelector(".traffic-bar .bar i");
+      if (bar) bar.style.width = `${Math.min(100, number(totalTraffic[5]) * 100)}%`;
+    }
+
+    ["desigual", "wiseman", "digital"].forEach(key => {
+      const sales = salesSummaryMap.get(key);
+      const traffic = trafficSummaryMap.get(key);
+      if (sales) {
+        setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-anterior"]`, displayMoney(number(sales[2])));
+        setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-actual"]`, displayMoney(number(sales[3])));
+        setCompliancePill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, number(sales[2]) ? number(sales[3]) / number(sales[2]) : 0);
+        const focus = document.querySelector(`.brand-focus [data-brand="${key}"]`);
+        if (focus) focus.querySelector('[data-metric="ticket-promedio"]').textContent = displayMoney(number(sales[5]));
+        const analysisVariation = document.querySelector(`.brand-analysis [data-brand="${key}"] [data-metric="variacion"]`);
+        if (analysisVariation) analysisVariation.textContent = displayPercent(sales[4]);
+      }
+      if (traffic) {
+        const focus = document.querySelector(`.brand-focus [data-brand="${key}"]`);
+        if (focus && traffic[6] !== "" && traffic[6] !== undefined) {
+          focus.querySelector('[data-metric="tasa-recompra"]').textContent = displayPercent(traffic[6]);
+        }
+      }
+    });
+
+    const salesDetails = salesRows.slice(salesDetailHeader >= 0 ? salesDetailHeader + 1 : 9).filter(row => row[1] && normalize(row[1]) !== "total compania")
+      .map(row => ({
+        brand: inferBrand(row[0] || row[1]), store:row[1], salesPrev:row[2], salesNow:row[3],
+        salesVar:row[4], ticket:row[5], salesGoal:row[6], salesCompliance:row[7], conversion:row[8]
+      }));
+    const trafficDetails = trafficRows.slice(trafficDetailHeader >= 0 ? trafficDetailHeader + 1 : 9).filter(row => row[0] && normalize(row[0]) !== "total general")
+      .map(row => ({
+        store:row[0], trafficPrev:row[1], trafficNow:row[2], trafficVar:row[3],
+        trafficGoal:row[4], trafficCompliance:row[5]
+      }));
+    const trafficMap = new Map(trafficDetails.map(item => [normalizeStore(item.store), item]));
+    const combined = salesDetails.map(sales => {
+      const exact = trafficMap.get(normalizeStore(sales.store));
+      if (exact) return {...sales, ...exact, store:sales.store};
+      const search = Array.from(trafficMap.entries()).find(([key]) =>
+        key.includes(normalizeStore(sales.store)) || normalizeStore(sales.store).includes(key)
+      );
+      return {...sales, ...(search?.[1] || {})};
+    });
+
+    const updateSplitLevis = key => {
+      const rows = combined.filter(item => item.brand === key);
+      const salesSummaryRow = salesSummaryMap.get(key);
+      const trafficSummaryRow = trafficSummaryMap.get(key);
+      if (!rows.length && !salesSummaryRow) return;
+      const sum = field => rows.reduce((total, item) => total + number(item[field]), 0);
+      const salesPrev = salesSummaryRow ? number(salesSummaryRow[2]) : sum("salesPrev");
+      const salesNow = salesSummaryRow ? number(salesSummaryRow[3]) : sum("salesNow");
+      const salesGoal = salesSummaryRow ? number(salesSummaryRow[6]) : sum("salesGoal");
+      const trafficPrev = trafficSummaryRow ? number(trafficSummaryRow[1]) : sum("trafficPrev");
+      const trafficNow = trafficSummaryRow ? number(trafficSummaryRow[2]) : sum("trafficNow");
+      const trafficGoal = trafficSummaryRow ? number(trafficSummaryRow[4]) : sum("trafficGoal");
+      const ticketWeight = rows.reduce((total, item) => total + Math.max(number(item.salesNow), 0), 0);
+      const calculatedTicket = ticketWeight
+        ? rows.reduce((total, item) => total + number(item.ticket) * Math.max(number(item.salesNow), 0), 0) / ticketWeight
+        : rows.length ? rows.reduce((total, item) => total + number(item.ticket), 0) / rows.length : 0;
+      const ticket = salesSummaryRow ? number(salesSummaryRow[5]) : calculatedTicket;
+      const variation = salesSummaryRow && salesSummaryRow[4] !== ""
+        ? number(salesSummaryRow[4])
+        : salesPrev ? salesNow / salesPrev - 1 : 0;
+
+      setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-anterior"]`, displayMoney(salesPrev));
+      setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-actual"]`, displayMoney(salesNow));
+      setCompliancePill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, salesPrev ? salesNow / salesPrev : 0);
+
+      const focus = document.querySelector(`.brand-focus [data-brand="${key}"]`);
+      if (focus) {
+        focus.querySelector('[data-metric="ticket-promedio"]').textContent = displayMoney(ticket);
+        const repurchase = trafficSummaryRow?.[6];
+        focus.querySelector('[data-metric="tasa-recompra"]').textContent =
+          repurchase !== "" && repurchase !== undefined ? displayPercent(repurchase) : "No disponible";
+      }
+      const analysisVariation = document.querySelector(`.brand-analysis [data-brand="${key}"] [data-metric="variacion"]`);
+      if (analysisVariation) analysisVariation.textContent = displayPercent(variation);
+
+      rows.forEach(item => {
+        item.salesGroupGoal = salesGoal;
+        item.trafficGroupPrev = trafficPrev;
+        item.trafficGroupNow = trafficNow;
+        item.trafficGroupGoal = trafficGoal;
+      });
+    };
+    updateSplitLevis("levis");
+    updateSplitLevis("levis-outlet");
+
+    window.reportStoreData = combined;
+    renderStorePerformance();
+    return {brands:new Set(combined.map(item => item.brand)).size, stores:combined.length};
+  }
+
+  function renderStorePerformance() {
+    const tbody = document.querySelector("#storePerformanceRows");
+    if (!tbody) return;
+    const selected = window.storeDetailBrand || "all";
+    const query = normalize(document.querySelector("#storeDetailSearch")?.value || "");
+    const data = (window.reportStoreData || []).filter(item =>
+      (selected === "all" || item.brand === selected) && (!query || normalize(item.store).includes(query))
+    );
+    tbody.innerHTML = data.map(item => `<tr data-brand="${item.brand}">
+      <td class="store-cell"><strong>${escapeHtml(item.store)}</strong><small>${brandLabels[item.brand] || item.brand}</small></td>
+      <td>${displayMoney(number(item.salesPrev))}</td><td>${displayMoney(number(item.salesNow))}</td><td>${displayPercent(item.salesVar)}</td>
+      <td>${displayMoney(number(item.ticket))}</td><td>${displayMoney(number(item.salesGoal))}</td><td>${compliancePill(item.salesCompliance)}</td>
+      <td>${displayNumber(number(item.trafficPrev))}</td><td>${displayNumber(number(item.trafficNow))}</td><td>${item.trafficVar === "" || item.trafficVar === undefined ? "—" : displayPercent(item.trafficVar)}</td>
+      <td>${displayNumber(number(item.trafficGoal))}</td><td>${compliancePill(item.trafficCompliance)}</td>
+    </tr>`).join("") || '<tr><td colspan="12" class="empty-table">No hay tiendas para este filtro.</td></tr>';
+    const count = document.querySelector("#storeDetailCount");
+    if (count) count.textContent = `${data.length} tiendas`;
+  }
+
+  function applyDailyTraffic(rows) {
+    if (rows.length < 2) return 0;
+    const commercialStores = window.reportStoreData || [];
+    const storeBrand = store => {
+      const normalized = normalizeStore(store);
+      const match = commercialStores.find(item => {
+        const candidate = normalizeStore(item.store);
+        return candidate === normalized || candidate.includes(normalized) || normalized.includes(candidate);
+      });
+      return match?.brand || "";
+    };
+    window.reportDailyTraffic = rows.slice(1).filter(row => row[1]).map(row => ({
+      rawDate:row[0], date:displayDate(row[0]), store:row[1], brand:storeBrand(row[1]),
+      exterior:row[2], individual:row[3], conversion:row[4]
+    }));
+    const groups = new Map();
+    window.reportDailyTraffic.forEach(item => {
+      const key = normalize(item.store);
+      if (!groups.has(key)) groups.set(key, {key, store:item.store, brand:item.brand, days:[]});
+      groups.get(key).days.push(item);
+    });
+    window.reportTrafficStores = Array.from(groups.values()).map(group => {
+      const validConversions = group.days.map(day => number(day.conversion)).filter(value => Number.isFinite(value) && value >= 0 && value <= 2);
+      const best = group.days.reduce((winner, day) => number(day.exterior) > number(winner?.exterior) ? day : winner, null);
+      return {
+        ...group,
+        exterior:group.days.reduce((sum, day) => sum + number(day.exterior), 0),
+        individual:group.days.reduce((sum, day) => sum + number(day.individual), 0),
+        conversion:validConversions.length ? validConversions.reduce((sum, value) => sum + value, 0) / validConversions.length : 0,
+        best
+      };
+    }).sort((a, b) => b.exterior - a.exterior);
+    const select = document.querySelector("#dailyTrafficStore");
+    if (select) {
+      select.innerHTML = window.reportTrafficStores.map(item =>
+        `<option value="${escapeHtml(item.key)}">${escapeHtml(item.brand ? `${brandLabels[item.brand] || item.brand} · ${item.store}` : item.store)}</option>`
+      ).join("");
+      window.selectedTrafficStore = window.reportTrafficStores[0]?.key || "";
+      select.value = window.selectedTrafficStore;
+    }
+    renderDailyTraffic();
+    return window.reportDailyTraffic.length;
+  }
+
+  function renderDailyTraffic() {
+    const tbody = document.querySelector("#dailyTrafficRows");
+    if (!tbody) return;
+    const stores = window.reportTrafficStores || [];
+    tbody.innerHTML = stores.map(item => `<tr class="traffic-rank-row${item.key === window.selectedTrafficStore ? " selected" : ""}" data-traffic-store="${escapeHtml(item.key)}" data-brand="${escapeHtml(item.brand)}">
+      <td class="store-cell"><strong>${escapeHtml(item.store)}</strong><small>${escapeHtml(brandLabels[item.brand] || item.brand || "Sin clasificar")}</small></td>
+      <td>${item.days.length}</td><td>${displayNumber(item.exterior)}</td><td>${displayNumber(item.individual)}</td>
+      <td>${displayPercent(item.conversion)}</td><td>${escapeHtml(item.best?.date || "—")}</td>
+    </tr>`).join("") || '<tr><td colspan="6" class="empty-table">Sin datos de tráfico.</td></tr>';
+    const count = document.querySelector("#dailyTrafficCount");
+    if (count) count.textContent = `${stores.length} puntos de venta`;
+    const selected = stores.find(item => item.key === window.selectedTrafficStore) || stores[0];
+    if (!selected) return;
+    window.selectedTrafficStore = selected.key;
+    setText("#trafficExteriorTotal", displayNumber(selected.exterior));
+    setText("#trafficIndividualTotal", displayNumber(selected.individual));
+    setText("#trafficConversionAvg", displayPercent(selected.conversion));
+    setText("#trafficBestDay", selected.best?.date || "—");
+    const maxExterior = Math.max(...selected.days.map(day => number(day.exterior)), 1);
+    const chart = document.querySelector("#trafficDailyChart");
+    if (chart) {
+      chart.innerHTML = selected.days.slice().sort((a, b) => number(a.rawDate) - number(b.rawDate)).map(day => {
+        const height = Math.max(4, number(day.exterior) / maxExterior * 100);
+        const conversion = typeof day.conversion === "string" && !number(day.conversion) ? "Sin dato" : displayPercent(day.conversion);
+        return `<div class="traffic-day">
+          <div class="traffic-day-tooltip"><b>${escapeHtml(day.date)}</b><span>Exterior: ${displayNumber(number(day.exterior))}</span><span>Individual: ${displayNumber(number(day.individual))}</span><span>Conversión: ${conversion}</span></div>
+          <div class="traffic-bar-column"><i style="height:${height}%"></i></div>
+          <small>${escapeHtml(day.date.split(" ")[0])}</small>
+        </div>`;
+      }).join("");
+    }
+  }
+
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+  const defaultImage = brand => brand === "desigual" ? "assets/ventas-privadas.png" : brand === "wiseman" ? "assets/wiseman-papa.png" : "assets/papa-con-estilo.png";
+  const driveImageUrl = value => {
+    const url = String(value ?? "").trim();
+    if (!url || normalize(url).includes("pegar enlace publico")) return "";
+    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)
+      || url.match(/[?&]id=([a-zA-Z0-9_-]+)/)
+      || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match?.[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1600`;
+    return /^https?:\/\//i.test(url) ? url : "";
+  };
+  const actionKey = (brand, campaign) => `${brandKey(brand)}|${normalize(campaign)}`;
+
+  function evidenceMap(rows) {
+    if (rows.length < 2) return new Map();
+    const headers = rows[0];
+    const map = new Map();
+    rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).forEach(raw => {
+      const row = rowObject(headers, raw);
+      const brand = pick(row, "marca");
+      const campaign = pick(row, "campana", "campaña");
+      const source = driveImageUrl(pick(row, "enlace de drive", "enlace drive", "url", "enlace"));
+      if (!brand || !campaign || !source) return;
+      const key = actionKey(brand, campaign);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push({
+        source,
+        order:number(pick(row, "orden")) || 999,
+        principal:normalize(pick(row, "principal")) === "si",
+        description:pick(row, "descripcion", "descripción"),
+        type:pick(row, "tipo de accion", "tipo de acción", "tipo")
+      });
+    });
+    map.forEach(items => items.sort((a, b) => Number(b.principal) - Number(a.principal) || a.order - b.order));
+    return map;
+  }
+  const actionCategory = value => {
+    const key = normalize(value);
+    if (key.includes("email") || key.includes("sms") || key.includes("whatsapp") || key.includes("crm") || key.includes("mail")) return "crm";
+    if (key.includes("fichero") || key.includes("google") || key.includes("seo") || key.includes("perfil de negocio")) return "ficheros-google";
+    if (key.includes("redes") || key.includes("social") || key.includes("instagram") || key.includes("facebook") || key.includes("tiktok")) return "redes-sociales";
+    if (key.includes("btl") || key.includes("activacion") || key.includes("punto de venta")) return "btl";
+    if (key.includes("atl") || key.includes("radio") || key.includes("television") || key.includes("prensa") || key.includes("valla")) return "atl";
+    if (key.includes("vitrina") || key.includes("visual")) return "vitrinas";
+    if (key.includes("evento") || key.includes("lanzamiento") || key.includes("reapertura")) return "eventos";
+    return "otros";
+  };
+  const categoryLabels = {
+    "crm":"CRM", "btl":"BTL", "redes-sociales":"Redes sociales",
+    "ficheros-google":"Ficheros de Google", "atl":"ATL",
+    "vitrinas":"Vitrinas", "eventos":"Eventos", "otros":"Otros"
+  };
+
+  function actionCard(row, linkedEvidence = []) {
+    const brand = brandKey(pick(row, "marca")) || "levis";
+    const title = pick(row, "titulo", "título", "campana", "campaña") || "Acción de marketing";
+    const type = pick(row, "tipo", "canal") || "Marketing";
+    const date = pick(row, "fecha", "fecha envio", "fecha envío") || "Semana actual";
+    const description = pick(row, "descripcion", "descripción", "segmento") || "Acción importada desde el archivo semanal.";
+    const channels = String(pick(row, "canales", "canal") || "").split(/[,;+]/).map(item => item.trim()).filter(Boolean);
+    const categories = Array.from(new Set([type, ...channels].map(actionCategory)));
+    if (categories.length > 1) {
+      const withoutOther = categories.filter(category => category !== "otros");
+      if (withoutOther.length) categories.splice(0, categories.length, ...withoutOther);
+    }
+    const categoryText = categories.map(category => categoryLabels[category]).join(" · ");
+    const linkedImages = linkedEvidence.map(item => item.source);
+    const images = linkedImages.length ? linkedImages : row.__images?.length ? row.__images : [row.__image || defaultImage(brand)];
+    const image = images[0];
+    const results = ["resultado 1", "resultado 2", "resultado 3"].map(name => pick(row, name)).filter(Boolean);
+    return `<article class="evidence-card" data-brand="${brand}" data-type="${categories.join(" ")}">
+      <div class="evidence-image">
+        <img class="replaceable-image" src="${image}" alt="${escapeHtml(title)}">
+        <span class="image-edit-hint">Cambiar imagen</span>
+        <div class="card-brand">${brandLabels[brand] || escapeHtml(pick(row, "marca"))}</div>
+        <div class="card-action-type">${escapeHtml(categoryText)}</div>
+      </div>
+      <div class="evidence-gallery">
+        ${images.map((source, index) => `<button class="gallery-thumb${index === 0 ? " active" : ""}" type="button"><img src="${source}" alt="${escapeHtml(title)} ${index + 1}"><span class="remove-gallery-image" aria-label="Eliminar foto">×</span></button>`).join("")}
+        <button class="add-gallery-images" type="button">＋ Fotos</button>
+      </div>
+      <div class="evidence-body">
+        <div class="evidence-meta"><span>${escapeHtml(type)}</span><time class="editable" contenteditable="false">${escapeHtml(date)}</time></div>
+        <h3 class="editable" contenteditable="false">${escapeHtml(title)}</h3>
+        <p class="editable" contenteditable="false">${escapeHtml(description)}</p>
+        ${results.length ? `<div class="imported-results">${results.map(result => `<span>${escapeHtml(result)}</span>`).join("")}</div>` : ""}
+        <div class="channel-list">${channels.map(channel => `<span>${escapeHtml(channel)}</span>`).join("")}</div>
+      </div>
+      <button class="delete-card" type="button" aria-label="Eliminar evidencia">×</button>
+    </article>`;
+  }
+
+  function applyActions(rows, evidenceRows = []) {
+    if (rows.length < 2) return 0;
+    const headers = rows[0];
+    const data = rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).map(row => rowObject(headers, row));
+    if (!data.length) return 0;
+    const links = evidenceMap(evidenceRows);
+    const grid = document.querySelector("#evidenceGrid");
+    grid.innerHTML = data.map(row => actionCard(row, links.get(actionKey(pick(row, "marca"), pick(row, "titulo", "título", "campana", "campaña"))) || [])).join("");
+    window.hydrateGalleryControls?.(grid);
+    window.resetActionFilters?.();
+    return data.length;
+  }
+
+  async function importExcel(file) {
+    status(`Leyendo ${file.name}…`);
+    const files = await unzip(await file.arrayBuffer());
+    const workbook = parseWorkbook(files);
+    const salesSheet = sheetByName(workbook, "Ventas");
+    const trafficSheet = sheetByName(workbook, "Trafico");
+    let brands = 0;
+    let stores = 0;
+    if (salesSheet.length && trafficSheet.length) {
+      const commercial = applySalesTrafficFormat(salesSheet, trafficSheet);
+      brands = commercial.brands;
+      stores = commercial.stores;
+    } else {
+      applySummary(sheetByName(workbook, "Resumen"));
+      brands = applyBrands(sheetByName(workbook, "Marcas"));
+    }
+    const dailyTraffic = applyDailyTraffic(sheetByName(workbook, "Trafico Detallado"));
+    const crm = applyCRM(sheetByName(workbook, "CRM"));
+    const actions = applyActions(sheetByName(workbook, "Acciones"), sheetByName(workbook, "Evidencias"));
+    window.saveReport?.(false);
+    status(`Excel aplicado: ${brands} marcas${stores ? `, ${stores} tiendas` : ""}, ${dailyTraffic} registros de tráfico, ${crm} campañas CRM${actions ? ` y ${actions} acciones` : ""}.`);
+    window.showToast?.("Datos del Excel actualizados");
+  }
+
+  const bytesToDataUrl = (bytes, mime) => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(new Blob([bytes], {type:mime}));
+  });
+
+  function pptBrand(text, current) {
+    const key = normalize(text);
+    if (key.includes("desigual") || key.includes("ventas privadas")) return "desigual";
+    if (key.includes("wiseman") || key.includes("papa titular")) return "wiseman";
+    if (key.includes("levi") && key.includes("outlet")) return "levis-outlet";
+    if (key.includes("levi") || key.includes("papa con estilo") || key.includes("colina")) return "levis";
+    return current;
+  }
+
+  function pptActionType(text) {
+    const key = normalize(text);
+    if (key.includes("campana email")) return "Email";
+    if (key.includes("campana sms")) return "SMS";
+    if (key.includes("campana whatsapp")) return "WhatsApp";
+    if (key.includes("evento") || key.includes("lanzamiento") || key.includes("reapertura")) return "Evento";
+    if (key.includes("vitrina")) return "Vitrinas";
+    if (key.includes("post redes")) return "Redes sociales";
+    if (key.includes("ficheros de google")) return "Google / tiendas";
+    if (key.includes("pauta btl")) return "Pauta BTL";
+    if (key.includes("pauta atl") || key.includes("radio") || key.includes("television") || key.includes("prensa") || key.includes("valla")) return "ATL";
+    return "";
+  }
+
+  function pptTitle(items, text, type) {
+    const known = [
+      /PAP[ÁA] CON ESTILO/i, /LANZAMIENTO LEVI[’']?S COLINA/i,
+      /REBAJAS\s*[-–—]\s*VENTAS PRIVADAS/i, /VENTAS PRIVADAS/i,
+      /EL PAP[ÁA] TITULAR(?:\s*[-–—]?\s*40%\s*OFF)?/i,
+      /TODO\s+50%,?\s*40%\s*Y\s*30%/i, /TODA LA TIENDA\s*30%\s*OFF/i
+    ];
+    for (const pattern of known) {
+      const match = text.match(pattern);
+      if (match) return match[0].replace(/\s+/g, " ").trim();
+    }
+    const excluded = ["campaña", "enviado", "segmento", "tiendas", "fecha", "centro comercial", "pauta", "duración", "del "];
+    return items.map(item => item.trim()).filter(item => item.length > 5 && item.length < 100)
+      .find(item => !excluded.some(word => normalize(item).startsWith(normalize(word))) && normalize(item) !== normalize(type))
+      || `${type} semanal`;
+  }
+
+  function resolvePath(base, target) {
+    if (target.startsWith("/")) return target.slice(1);
+    const parts = base.split("/"); parts.pop();
+    target.split("/").forEach(part => part === ".." ? parts.pop() : part !== "." && parts.push(part));
+    return parts.join("/");
+  }
+
+  async function importPowerPoint(file) {
+    status(`Leyendo ${file.name} y extrayendo evidencias…`);
+    const files = await unzip(await file.arrayBuffer());
+    const slidePaths = Array.from(files.keys()).filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+      .sort((a, b) => number(a.match(/\d+/)?.[0]) - number(b.match(/\d+/)?.[0]));
+    const actions = [];
+    const crmRows = [];
+    let currentBrand = "levis";
+    for (const slidePath of slidePaths) {
+      const doc = xml(textDecoder.decode(files.get(slidePath)));
+      const items = elements(doc, "t").map(item => item.textContent).filter(Boolean);
+      const fullText = items.join(" | ");
+      currentBrand = pptBrand(fullText, currentBrand);
+      const type = pptActionType(fullText);
+      if (!type) continue;
+      const row = {
+        marca: currentBrand,
+        titulo: pptTitle(items, fullText, type),
+        tipo: type,
+        fecha: fullText.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/)?.[0] || fullText.match(/(?:del\s+)?\d{1,2}\s+de\s+\w+(?:\s+de\s+\d{4})?/i)?.[0] || "Semana importada",
+        descripcion: items.find(item => item.length > 120) || items.find(item => normalize(item).startsWith("segmento")) || `Evidencia importada desde la presentación: ${type}.`,
+        canales: type
+      };
+      if (["Email", "SMS", "WhatsApp"].includes(type)) {
+        crmRows.push({
+          marca: currentBrand,
+          canal: type,
+          campana: row.titulo,
+          "fecha envio": row.fecha,
+          segmento: items.find(item => normalize(item).startsWith("segmento"))?.replace(/^segmento\s*:?\s*/i, "") || "",
+          "resultado destacado": row.titulo
+        });
+      }
+      const relPath = slidePath.replace("ppt/slides/", "ppt/slides/_rels/") + ".rels";
+      const relData = files.get(relPath);
+      if (relData) {
+        const relDoc = xml(textDecoder.decode(relData));
+        const imageTargets = elements(relDoc, "Relationship")
+          .filter(rel => String(rel.getAttribute("Type")).includes("/image"))
+          .map(rel => resolvePath(slidePath, rel.getAttribute("Target")))
+          .filter(path => files.has(path))
+          .sort((a, b) => files.get(b).length - files.get(a).length);
+        row.__images = [];
+        for (const imageTarget of imageTargets.slice(0, 12)) {
+          const extension = imageTarget.split(".").pop().toLowerCase();
+          const mime = extension === "png" ? "image/png" : extension === "gif" ? "image/gif" : "image/jpeg";
+          row.__images.push(await bytesToDataUrl(files.get(imageTarget), mime));
+        }
+      }
+      actions.push(row);
+    }
+    const actionMap = new Map();
+    actions.forEach(action => {
+      const key = `${action.marca}|${normalize(action.titulo)}|${normalize(action.tipo)}`;
+      if (!actionMap.has(key)) {
+        actionMap.set(key, action);
+      } else {
+        const existing = actionMap.get(key);
+        existing.__images = Array.from(new Set([...(existing.__images || []), ...(action.__images || [])]));
+        if (existing.descripcion.startsWith("Evidencia importada") && !action.descripcion.startsWith("Evidencia importada")) {
+          existing.descripcion = action.descripcion;
+        }
+      }
+    });
+    const unique = Array.from(actionMap.values());
+    if (!unique.length) throw new Error("No se encontraron diapositivas reconocibles como acciones de marketing.");
+    const grid = document.querySelector("#evidenceGrid");
+    grid.innerHTML = unique.map(actionCard).join("");
+    window.hydrateGalleryControls?.(grid);
+    window.resetActionFilters?.();
+    if (crmRows.length) {
+      const headers = ["Marca", "Canal", "Campaña", "Fecha envío", "Segmento", "Enviados", "Entregados", "Tasa entrega", "Apertura", "CTR", "Leídos", "Respuestas", "Conversiones", "Bajas", "Base impactada", "Resultado destacado"];
+      const crmSheet = [headers, ...crmRows.map(row => headers.map(header => row[normalize(header)] ?? ""))];
+      applyCRM(crmSheet);
+    }
+    window.saveReport?.(false);
+    status(`PowerPoint aplicado: ${unique.length} acciones y evidencias visuales.`);
+    window.showToast?.("Acciones del PowerPoint importadas");
+  }
+
+  function status(message) {
+    const target = document.querySelector("#importStatus");
+    if (target) target.textContent = message;
+  }
+
+  function handle(input, importer) {
+    input?.addEventListener("change", async event => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        await importer(file);
+      } catch (error) {
+        console.error(error);
+        status(`No se pudo importar: ${error.message}`);
+        window.showToast?.("No fue posible importar el archivo");
+      } finally {
+        event.target.value = "";
+      }
+    });
+  }
+
+  handle(document.querySelector("#importExcel"), importExcel);
+  handle(document.querySelector("#importPowerPoint"), importPowerPoint);
+  document.addEventListener("click", event => {
+    const detailFilter = event.target.closest(".detail-filter");
+    if (detailFilter) {
+      document.querySelectorAll(".detail-filter").forEach(button => button.classList.remove("active"));
+      detailFilter.classList.add("active");
+      window.storeDetailBrand = detailFilter.dataset.detailBrand;
+      renderStorePerformance();
+    }
+    const trafficRow = event.target.closest(".traffic-rank-row");
+    if (trafficRow) {
+      window.selectedTrafficStore = trafficRow.dataset.trafficStore;
+      const select = document.querySelector("#dailyTrafficStore");
+      if (select) select.value = window.selectedTrafficStore;
+      renderDailyTraffic();
+    }
+  });
+  document.querySelector("#storeDetailSearch")?.addEventListener("input", renderStorePerformance);
+  document.querySelector("#dailyTrafficStore")?.addEventListener("change", event => {
+    window.selectedTrafficStore = event.target.value;
+    renderDailyTraffic();
+  });
+  window.ReportImporter = {importExcel, importPowerPoint, unzip, parseWorkbook, applySalesTrafficFormat, applyDailyTraffic};
+})();
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111111">
+  <title>Informe semanal | Marketing UB Cuarenta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="company" href="#inicio" aria-label="Ir al inicio">
+      <img src="assets/ub-cuarenta.png" alt="Comercializadora UB Cuarenta">
+    </a>
+    <nav aria-label="Navegación del informe">
+      <a href="#resumen">Resumen</a>
+      <a href="#marcas">Marcas</a>
+      <a href="#acciones">Acciones</a>
+      <a href="#conclusiones">Conclusiones</a>
+    </nav>
+    <button class="edit-toggle" id="editToggle" type="button">
+      <span class="edit-dot"></span>
+      <span id="editLabel">Editar informe</span>
+    </button>
+  </header>
+
+  <main id="editableContent">
+    <section class="hero" id="inicio">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Marketing + canal e-commerce</p>
+          <h1>Informe<br><span>semanal</span></h1>
+          <p class="hero-period editable" data-field="periodo" contenteditable="false">Ejecución del 08 al 14 de junio de 2026</p>
+          <div class="hero-meta">
+            <span>Semana 6.2</span>
+            <span>Comité gerencial</span>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-stat">
+            <span class="hero-stat-label">Resultado compañía</span>
+            <strong class="editable" data-field="variacion-compania" contenteditable="false">+12%</strong>
+            <span>vs. misma semana 2025</span>
+          </div>
+          <div class="hero-rings" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="brand-stack" aria-label="Marcas del portafolio">
+            <img src="assets/levis.png" alt="Levi's">
+            <img src="assets/desigual.png" alt="Desigual">
+            <img src="assets/wiseman.png" alt="Wiseman">
+          </div>
+        </div>
+      </div>
+      <a class="scroll-hint" href="#resumen">Ver resultados <span>↓</span></a>
+    </section>
+
+    <section class="section shell" id="resumen">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">01 — Pulso del negocio</p>
+          <h2>Resumen ejecutivo</h2>
+        </div>
+        <p class="section-intro editable" contenteditable="false">La compañía cerró la semana con crecimiento, impulsado por Levi’s y el canal digital. El tráfico continúa siendo el principal reto para capturar la meta comercial.</p>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="kpi-card kpi-dark">
+          <div class="kpi-icon">↗</div>
+          <span>Ventas semana</span>
+          <strong class="editable" data-field="ventas-semana" contenteditable="false">$900,7M</strong>
+          <small><b class="positive editable" data-field="variacion-semana" contenteditable="false">+12%</b> vs. 2025</small>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-icon">◎</div>
+          <span>Cumplimiento meta</span>
+          <strong class="editable" data-field="cumplimiento-meta" contenteditable="false">76,2%</strong>
+          <small>Meta: <b class="editable" data-field="meta-semana" contenteditable="false">$1.182,6M</b></small>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-icon">◌</div>
+          <span>Tráfico</span>
+          <strong class="editable" data-field="trafico-semana" contenteditable="false">15.855</strong>
+          <small><b class="warning editable" data-field="cumplimiento-trafico" contenteditable="false">79%</b> de la meta semanal</small>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-icon">◫</div>
+          <span>Ticket promedio compañía</span>
+          <strong class="editable" data-field="ticket-compania" contenteditable="false">$412,7K</strong>
+          <small>Promedio de la semana</small>
+        </article>
+      </div>
+
+      <div class="performance-grid">
+        <article class="panel sales-panel">
+          <div class="panel-head">
+            <div>
+              <span class="mini-label">Desempeño comercial</span>
+              <h3>Ventas por unidad de negocio</h3>
+            </div>
+            <span class="badge">COP</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Unidad</th><th>2025</th><th>2026</th><th>Cumpl. año ant.</th></tr>
+              </thead>
+              <tbody>
+                <tr data-brand="levis"><td>Levi’s Línea</td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>—</span></td></tr>
+                <tr data-brand="levis-outlet"><td>Levi’s Outlet</td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>—</span></td></tr>
+                <tr data-brand="desigual"><td>Desigual</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$107,3M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$87,9M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>82%</span></td></tr>
+                <tr data-brand="wiseman"><td>Wiseman</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$18,2M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$16,4M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>90%</span></td></tr>
+                <tr data-brand="digital"><td>Digital</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$6,0M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$21,0M</td><td><span class="compliance-pill met" data-col="variacion"><i></i>353%</span></td></tr>
+              </tbody>
+              <tfoot>
+                <tr><td>Total</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$805,9M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$900,7M</td><td><span class="compliance-pill met" data-col="variacion"><i></i>112%</span></td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel progress-panel">
+          <div class="panel-head">
+            <div>
+              <span class="mini-label">Avance semanal</span>
+              <h3>Meta vs. ejecución</h3>
+            </div>
+          </div>
+          <div class="radial" style="--progress:76.2">
+            <div><strong class="editable" data-field="cumplimiento-radial" contenteditable="false">76,2%</strong><span>cumplimiento</span></div>
+          </div>
+          <div class="progress-detail">
+            <span>Brecha para alcanzar la meta</span>
+            <strong class="editable" data-field="brecha-meta" contenteditable="false">$281,9M</strong>
+          </div>
+          <div class="traffic-bar">
+            <div><span>Tráfico</span><b class="editable" data-field="trafico-meta" contenteditable="false">15.855 / 20.141</b></div>
+            <span class="bar"><i style="width:79%"></i></span>
+          </div>
+        </article>
+      </div>
+
+      <div class="brand-focus">
+        <div class="panel-head">
+          <div>
+            <span class="mini-label">Indicadores prioritarios de gerencia</span>
+            <h3>Ticket promedio y tasa de recompra</h3>
+          </div>
+          <span class="badge">Por marca</span>
+        </div>
+        <div class="brand-focus-grid">
+          <article data-brand="levis">
+            <div class="focus-brand"><img src="assets/levis.png" alt="Levi's Línea"><span>Levi’s Línea</span></div>
+            <div class="focus-metrics">
+              <div><span>Ticket promedio</span><strong class="editable" data-metric="ticket-promedio" contenteditable="false">Por actualizar</strong></div>
+              <div><span>Tasa de recompra</span><strong class="editable" data-metric="tasa-recompra" contenteditable="false">Por actualizar</strong></div>
+            </div>
+          </article>
+          <article data-brand="levis-outlet">
+            <div class="focus-brand"><img src="assets/levis.png" alt="Levi's Outlet"><span>Levi’s Outlet</span></div>
+            <div class="focus-metrics">
+              <div><span>Ticket promedio</span><strong class="editable" data-metric="ticket-promedio" contenteditable="false">Por actualizar</strong></div>
+              <div><span>Tasa de recompra</span><strong class="editable" data-metric="tasa-recompra" contenteditable="false">Por actualizar</strong></div>
+            </div>
+          </article>
+          <article data-brand="desigual">
+            <div class="focus-brand"><img src="assets/desigual.png" alt="Desigual"><span>Desigual</span></div>
+            <div class="focus-metrics">
+              <div><span>Ticket promedio</span><strong class="editable" data-metric="ticket-promedio" contenteditable="false">Por actualizar</strong></div>
+              <div><span>Tasa de recompra</span><strong class="editable" data-metric="tasa-recompra" contenteditable="false">Por actualizar</strong></div>
+            </div>
+          </article>
+          <article data-brand="wiseman">
+            <div class="focus-brand"><img src="assets/wiseman.png" alt="Wiseman"><span>Wiseman</span></div>
+            <div class="focus-metrics">
+              <div><span>Ticket promedio</span><strong class="editable" data-metric="ticket-promedio" contenteditable="false">Por actualizar</strong></div>
+              <div><span>Tasa de recompra</span><strong class="editable" data-metric="tasa-recompra" contenteditable="false">Por actualizar</strong></div>
+            </div>
+          </article>
+        </div>
+        <p class="metric-note">La tasa de recompra debe conservar la misma definición cada semana: clientes que vuelven a comprar dentro del período definido por la compañía.</p>
+      </div>
+
+      <div class="commercial-detail">
+        <div class="panel-head">
+          <div>
+            <span class="mini-label">Detalle operativo</span>
+            <h3>Ventas y tráfico por tienda</h3>
+          </div>
+          <span class="badge" id="storeDetailCount">Información semanal</span>
+        </div>
+        <div class="detail-controls">
+          <div class="filters detail-brand-filters" aria-label="Filtrar detalle por marca">
+            <button type="button" class="detail-filter active" data-detail-brand="all">Todas</button>
+            <button type="button" class="detail-filter" data-detail-brand="levis">Levi’s Línea</button>
+            <button type="button" class="detail-filter" data-detail-brand="levis-outlet">Levi’s Outlet</button>
+            <button type="button" class="detail-filter" data-detail-brand="desigual">Desigual</button>
+            <button type="button" class="detail-filter" data-detail-brand="wiseman">Wiseman</button>
+            <button type="button" class="detail-filter" data-detail-brand="digital">Digital</button>
+          </div>
+          <input class="detail-search" id="storeDetailSearch" type="search" placeholder="Buscar tienda…" aria-label="Buscar tienda">
+        </div>
+        <div class="table-wrap detail-table-wrap">
+          <table class="detail-performance-table">
+            <thead>
+              <tr>
+                <th rowspan="2">Marca / tienda</th>
+                <th colspan="6">Ventas</th>
+                <th colspan="5">Tráfico</th>
+              </tr>
+              <tr>
+                <th>2025</th><th>2026</th><th>Var.</th><th>Ticket</th><th>Meta</th><th>Cumpl.</th>
+                <th>2025</th><th>2026</th><th>Var.</th><th>Meta</th><th>Cumpl.</th>
+              </tr>
+            </thead>
+            <tbody id="storePerformanceRows">
+              <tr><td colspan="12" class="empty-table">Carga el nuevo Excel para ver el detalle por tienda.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <details class="daily-traffic-panel">
+        <summary>
+          <span><small>Analítica diaria</small><strong>Tráfico exterior y conversión por punto de venta</strong></span>
+          <b>Ver detalle</b>
+        </summary>
+        <div class="traffic-dashboard-controls">
+          <label>Explorar tienda
+            <select id="dailyTrafficStore" class="traffic-store-select"><option value="">Carga el Excel</option></select>
+          </label>
+          <span class="badge" id="dailyTrafficCount">Sin datos</span>
+        </div>
+        <div class="traffic-summary-cards">
+          <article><span>Tráfico exterior</span><strong id="trafficExteriorTotal">—</strong></article>
+          <article><span>Tráfico individual</span><strong id="trafficIndividualTotal">—</strong></article>
+          <article><span>Conversión promedio</span><strong id="trafficConversionAvg">—</strong></article>
+          <article><span>Mejor día</span><strong id="trafficBestDay">—</strong></article>
+        </div>
+        <div class="traffic-daily-chart" id="trafficDailyChart"><p class="empty-table">Carga el Excel para visualizar la tendencia diaria.</p></div>
+        <div class="table-wrap detail-table-wrap traffic-ranking">
+          <table>
+            <thead><tr><th>Marca / punto de venta</th><th>Días</th><th>Tráfico exterior</th><th>Tráfico individual</th><th>Conversión prom.</th><th>Mejor día</th></tr></thead>
+            <tbody id="dailyTrafficRows"><tr><td colspan="6" class="empty-table">Carga el Excel para consultar el consolidado.</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section class="section brands-section" id="marcas">
+      <div class="shell">
+        <div class="section-heading light-heading">
+          <div>
+            <p class="eyebrow">02 — Lectura por marca</p>
+            <h2>Qué movió la semana</h2>
+          </div>
+          <p class="section-intro editable" contenteditable="false">Una lectura ejecutiva del desempeño, los aprendizajes y la oportunidad inmediata de cada marca.</p>
+        </div>
+        <div class="brand-analysis">
+          <article class="brand-analysis-card levis-card" data-brand="levis">
+            <div class="brand-card-top">
+              <img src="assets/levis.png" alt="Levi's">
+              <span class="brand-result positive editable" data-metric="variacion" contenteditable="false">+15%</span>
+            </div>
+            <h3 class="editable" data-metric="titular" contenteditable="false">Levi’s Línea: lectura comercial independiente.</h3>
+            <p class="editable" data-metric="lectura" contenteditable="false">“Papá con estilo” conectó con la base de datos y compensó la ausencia de dinámicas promocionales comparables con 2025.</p>
+            <div class="brand-tag">Tiendas de línea</div>
+          </article>
+          <article class="brand-analysis-card outlet-card" data-brand="levis-outlet">
+            <div class="brand-card-top">
+              <img src="assets/levis.png" alt="Levi's Outlet">
+              <span class="brand-result editable" data-metric="variacion" contenteditable="false">—</span>
+            </div>
+            <h3 class="editable" data-metric="titular" contenteditable="false">Levi’s Outlet: dinámica promocional propia.</h3>
+            <p class="editable" data-metric="lectura" contenteditable="false">Analizar por separado el comportamiento de Providencia 22A, Bima y Toberín permite leer correctamente su tráfico, precio y respuesta a promociones.</p>
+            <div class="brand-tag">Tiendas outlet</div>
+          </article>
+          <article class="brand-analysis-card desigual-card" data-brand="desigual">
+            <div class="brand-card-top">
+              <img src="assets/desigual.png" alt="Desigual">
+              <span class="brand-result negative editable" data-metric="variacion" contenteditable="false">−18%</span>
+            </div>
+            <h3 class="editable" data-metric="titular" contenteditable="false">Ventas privadas con espacio por capitalizar.</h3>
+            <p class="editable" data-metric="lectura" contenteditable="false">La apertura de la promoción a todo público redujo la sensación de exclusividad para las clientas recurrentes.</p>
+            <div class="brand-tag">Replantear exclusividad</div>
+          </article>
+          <article class="brand-analysis-card wiseman-card" data-brand="wiseman">
+            <div class="brand-card-top">
+              <img src="assets/wiseman.png" alt="Wiseman">
+              <span class="brand-result negative editable" data-metric="variacion" contenteditable="false">−10%</span>
+            </div>
+            <h3 class="editable" data-metric="titular" contenteditable="false">Bima reveló un público con potencial.</h3>
+            <p class="editable" data-metric="lectura" contenteditable="false">El tráfico extraordinario generado por un evento del centro comercial abre una ruta para nuevas alianzas y audiencias.</p>
+            <div class="brand-tag">Nueva audiencia</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section shell" id="acciones">
+      <div class="section-heading actions-heading">
+        <div>
+          <p class="eyebrow">03 — Ejecución y evidencias</p>
+          <h2>Acciones de marketing</h2>
+        </div>
+      </div>
+
+      <div class="action-filter-panel">
+        <div class="filter-group">
+          <span class="filter-label">Marca</span>
+          <div class="filters" aria-label="Filtrar acciones por marca">
+            <button type="button" class="filter active" data-filter-group="brand" data-filter="all">Todas</button>
+            <button type="button" class="filter" data-filter-group="brand" data-filter="levis">Levi’s Línea</button>
+            <button type="button" class="filter" data-filter-group="brand" data-filter="levis-outlet">Levi’s Outlet</button>
+            <button type="button" class="filter" data-filter-group="brand" data-filter="desigual">Desigual</button>
+            <button type="button" class="filter" data-filter-group="brand" data-filter="wiseman">Wiseman</button>
+          </div>
+        </div>
+        <p class="filter-result" id="filterResult">4 acciones visibles · El filtro también aplica al CRM</p>
+      </div>
+
+      <div class="crm-dashboard">
+        <div class="crm-intro">
+          <div>
+            <p class="eyebrow">Desempeño CRM</p>
+            <h3>Email, SMS y WhatsApp</h3>
+          </div>
+          <p class="editable" contenteditable="false">Resultados consolidados de las comunicaciones enviadas durante la semana. Los campos pueden actualizarse directamente en modo edición.</p>
+        </div>
+        <div class="crm-channel-grid">
+          <article class="crm-channel email-channel" data-channel="email">
+            <div class="crm-channel-head">
+              <span class="channel-icon">＠</span>
+              <div><small>Canal</small><h4>Email</h4></div>
+              <span class="channel-status">CRM</span>
+            </div>
+            <div class="crm-primary">
+              <span>Envíos realizados</span>
+              <strong class="editable" data-metric="enviados" contenteditable="false">Por actualizar</strong>
+            </div>
+            <div class="crm-metrics">
+              <div><span>Tasa de apertura</span><b class="editable" data-metric="apertura" contenteditable="false">—%</b></div>
+              <div><span>CTOR</span><b class="editable" data-metric="ctr" contenteditable="false">—%</b></div>
+              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">—%</b></div>
+              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">—</b></div>
+            </div>
+          </article>
+          <article class="crm-channel sms-channel" data-channel="sms">
+            <div class="crm-channel-head">
+              <span class="channel-icon">✉</span>
+              <div><small>Canal</small><h4>SMS</h4></div>
+              <span class="channel-status">CRM</span>
+            </div>
+            <div class="crm-primary">
+              <span>Mensajes enviados</span>
+              <strong class="editable" data-metric="enviados" contenteditable="false">Por actualizar</strong>
+            </div>
+            <div class="crm-metrics">
+              <div><span>Tasa de rebote</span><b class="editable" data-metric="bounce" contenteditable="false">—%</b></div>
+              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">—%</b></div>
+              <div><span>Transacciones</span><b class="editable" data-metric="transactions" contenteditable="false">—</b></div>
+              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">—</b></div>
+            </div>
+          </article>
+          <article class="crm-channel whatsapp-channel" data-channel="whatsapp">
+            <div class="crm-channel-head">
+              <span class="channel-icon">◉</span>
+              <div><small>Canal</small><h4>WhatsApp</h4></div>
+              <span class="channel-status">CRM</span>
+            </div>
+            <div class="crm-primary">
+              <span>Mensajes enviados</span>
+              <strong class="editable" data-metric="enviados" contenteditable="false">Por actualizar</strong>
+            </div>
+            <div class="crm-metrics">
+              <div><span>Leídos</span><b class="editable" data-metric="leidos" contenteditable="false">—%</b></div>
+              <div><span>Respuestas</span><b class="editable" data-metric="respuestas" contenteditable="false">—</b></div>
+              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">—%</b></div>
+              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">—</b></div>
+            </div>
+          </article>
+        </div>
+        <div class="crm-brand-table">
+          <div class="panel-head">
+            <div><span class="mini-label">Detalle editable</span><h3>Acciones CRM por marca</h3></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Marca</th><th>Email</th><th>SMS</th><th>WhatsApp</th><th>Base impactada</th><th>Resultado destacado</th></tr>
+              </thead>
+              <tbody id="crmBrandRows">
+                <tr data-brand="levis">
+                  <td>Levi’s Línea</td>
+                  <td class="editable" contenteditable="false">4 campañas</td>
+                  <td class="editable" contenteditable="false">2 envíos</td>
+                  <td class="editable" contenteditable="false">—</td>
+                  <td class="editable" contenteditable="false">Por actualizar</td>
+                  <td class="editable" contenteditable="false">Papá con estilo + relanzamiento Colina</td>
+                </tr>
+                <tr data-brand="levis-outlet">
+                  <td>Levi’s Outlet</td>
+                  <td class="editable" contenteditable="false">Por actualizar</td>
+                  <td class="editable" contenteditable="false">Por actualizar</td>
+                  <td class="editable" contenteditable="false">Por actualizar</td>
+                  <td class="editable" contenteditable="false">Por actualizar</td>
+                  <td class="editable" contenteditable="false">Providencia 22A, Bima y Toberín</td>
+                </tr>
+                <tr data-brand="desigual">
+                  <td>Desigual</td>
+                  <td class="editable" contenteditable="false">1 campaña</td>
+                  <td class="editable" contenteditable="false">1 envío</td>
+                  <td class="editable" contenteditable="false">—</td>
+                  <td class="editable" contenteditable="false">Por actualizar</td>
+                  <td class="editable" contenteditable="false">Ventas privadas</td>
+                </tr>
+                <tr data-brand="wiseman">
+                  <td>Wiseman</td>
+                  <td class="editable" contenteditable="false">1 campaña</td>
+                  <td class="editable" contenteditable="false">1 envío</td>
+                  <td class="editable" contenteditable="false">1 envío</td>
+                  <td class="editable" contenteditable="false">Por actualizar</td>
+                  <td class="editable" contenteditable="false">El papá titular</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <details class="crm-campaign-detail">
+          <summary>
+            <span><small>Atribución por envío</small><strong>Detalle de campañas CRM</strong></span>
+            <b>Ver campañas</b>
+          </summary>
+          <div class="table-wrap detail-table-wrap">
+            <table>
+              <thead>
+                <tr><th>Marca</th><th>Canal</th><th>Campaña</th><th>Fecha</th><th>Enviados</th><th>Apertura</th><th>CTOR</th><th>Conversión</th><th>Transacciones</th><th>Ingresos atribuidos</th></tr>
+              </thead>
+              <tbody id="crmCampaignRows"><tr><td colspan="10" class="empty-table">Carga el Excel para ver el detalle de campañas.</td></tr></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <div class="evidence-grid" id="evidenceGrid">
+        <article class="evidence-card featured" data-brand="levis" data-type="eventos btl">
+          <div class="evidence-image">
+            <img class="replaceable-image" src="assets/evento-colina-1.jpg" alt="Evento de relanzamiento Levi's Colina">
+            <span class="image-edit-hint">Cambiar foto</span>
+            <div class="card-brand">Levi’s Línea</div>
+            <div class="card-action-type">Evento / BTL</div>
+          </div>
+          <div class="evidence-gallery">
+            <button class="gallery-thumb active" type="button"><img src="assets/evento-colina-1.jpg" alt="Relanzamiento Levi’s Colina 1"></button>
+            <button class="gallery-thumb" type="button"><img src="assets/evento-colina-2.jpg" alt="Relanzamiento Levi’s Colina 2"></button>
+            <button class="gallery-thumb" type="button"><img src="assets/evento-colina-3.jpg" alt="Relanzamiento Levi’s Colina 3"></button>
+            <button class="add-gallery-images" type="button">＋ Fotos</button>
+          </div>
+          <div class="evidence-body">
+            <div class="evidence-meta"><span>Evento</span><time class="editable" contenteditable="false">12 de junio</time></div>
+            <h3 class="editable" contenteditable="false">Relanzamiento Levi’s Colina</h3>
+            <p class="editable" contenteditable="false">Experiencia de reapertura con catering, DJ, fotocabina, creadores de contenido y una dinámica de chaquetas Trucker.</p>
+            <div class="event-results">
+              <div><strong class="editable" contenteditable="false">+29%</strong><span>ventas vs. 2025</span></div>
+              <div><strong class="editable" contenteditable="false">$482K</strong><span>ticket promedio</span></div>
+              <div><strong class="editable" contenteditable="false">13%</strong><span>venta clientes VIP</span></div>
+            </div>
+          </div>
+          <button class="delete-card" type="button" aria-label="Eliminar evidencia">×</button>
+        </article>
+
+        <article class="evidence-card" data-brand="levis" data-type="crm redes-sociales ficheros-google">
+          <div class="evidence-image">
+            <img class="replaceable-image" src="assets/papa-con-estilo.png" alt="Campaña Papá con estilo">
+            <span class="image-edit-hint">Cambiar imagen</span>
+            <div class="card-brand">Levi’s Línea</div>
+            <div class="card-action-type">CRM</div>
+          </div>
+          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/papa-con-estilo.png" alt="Papá con estilo"></button><button class="add-gallery-images" type="button">＋ Fotos</button></div>
+          <div class="evidence-body">
+            <div class="evidence-meta"><span>CRM + social</span><time class="editable" contenteditable="false">09–14 junio</time></div>
+            <h3 class="editable" contenteditable="false">Papá con estilo</h3>
+            <p class="editable" contenteditable="false">Email, ficheros de Google por tienda y publicaciones en las redes corporativas.</p>
+            <div class="channel-list"><span>Email</span><span>Social</span><span>Tiendas</span></div>
+          </div>
+          <button class="delete-card" type="button" aria-label="Eliminar evidencia">×</button>
+        </article>
+
+        <article class="evidence-card" data-brand="desigual" data-type="crm redes-sociales ficheros-google vitrinas">
+          <div class="evidence-image">
+            <img class="replaceable-image" src="assets/ventas-privadas.png" alt="Campaña Ventas privadas Desigual">
+            <span class="image-edit-hint">Cambiar imagen</span>
+            <div class="card-brand">Desigual</div>
+            <div class="card-action-type">CRM</div>
+          </div>
+          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/ventas-privadas.png" alt="Ventas privadas Desigual"></button><button class="add-gallery-images" type="button">＋ Fotos</button></div>
+          <div class="evidence-body">
+            <div class="evidence-meta"><span>Campaña 360</span><time class="editable" contenteditable="false">08–14 junio</time></div>
+            <h3 class="editable" contenteditable="false">Rebajas — Ventas privadas</h3>
+            <p class="editable" contenteditable="false">Activación en email, SMS, vitrinas, fichas de tienda y redes sociales.</p>
+            <div class="channel-list"><span>Email</span><span>SMS</span><span>Vitrinas</span></div>
+          </div>
+          <button class="delete-card" type="button" aria-label="Eliminar evidencia">×</button>
+        </article>
+
+        <article class="evidence-card" data-brand="wiseman" data-type="crm redes-sociales ficheros-google">
+          <div class="evidence-image">
+            <img class="replaceable-image" src="assets/wiseman-papa.png" alt="Campaña El papá titular Wiseman">
+            <span class="image-edit-hint">Cambiar imagen</span>
+            <div class="card-brand">Wiseman</div>
+            <div class="card-action-type">CRM</div>
+          </div>
+          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/wiseman-papa.png" alt="El papá titular Wiseman"></button><button class="add-gallery-images" type="button">＋ Fotos</button></div>
+          <div class="evidence-body">
+            <div class="evidence-meta"><span>CRM + retail</span><time class="editable" contenteditable="false">13–16 junio</time></div>
+            <h3 class="editable" contenteditable="false">El papá titular — 40% OFF</h3>
+            <p class="editable" contenteditable="false">Comunicación por email, SMS, WhatsApp, fichas de tienda y redes corporativas.</p>
+            <div class="channel-list"><span>WhatsApp</span><span>SMS</span><span>Social</span></div>
+          </div>
+          <button class="delete-card" type="button" aria-label="Eliminar evidencia">×</button>
+        </article>
+      </div>
+
+      <button class="add-evidence" id="addEvidence" type="button">
+        <span>＋</span>
+        <b>Agregar nueva evidencia</b>
+        <small>Foto, campaña, canal y resultado</small>
+      </button>
+    </section>
+
+    <section class="section conclusions" id="conclusiones">
+      <div class="shell">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">04 — Decisiones</p>
+            <h2>Conclusiones y próximos pasos</h2>
+          </div>
+        </div>
+        <div class="decision-grid">
+          <article>
+            <span>01</span>
+            <div><h3 class="editable" contenteditable="false">Escalar lo que funciona</h3><p class="editable" contenteditable="false">Replicar la segmentación y el tono de “Papá con estilo” en futuras fechas comerciales de Levi’s.</p></div>
+          </article>
+          <article>
+            <span>02</span>
+            <div><h3 class="editable" contenteditable="false">Recuperar exclusividad</h3><p class="editable" contenteditable="false">Diseñar una primera ventana realmente privada para la base fiel de Desigual antes de abrir al público general.</p></div>
+          </article>
+          <article>
+            <span>03</span>
+            <div><h3 class="editable" contenteditable="false">Convertir tráfico en aprendizaje</h3><p class="editable" contenteditable="false">Probar alianzas y contenidos para la audiencia masculina identificada en Wiseman Bima.</p></div>
+          </article>
+        </div>
+        <div class="closing-note">
+          <span>Foco próxima semana</span>
+          <p class="editable" contenteditable="false">Aumentar tráfico calificado sin depender únicamente del descuento, reforzando CRM, experiencias en tienda y alianzas con centros comerciales.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <img src="assets/ub-cuarenta.png" alt="UB Cuarenta">
+    <p>Informe interno · Marketing y canal e-commerce</p>
+    <span class="editable" contenteditable="false">Junio 2026</span>
+  </footer>
+
+  <aside class="editor-panel" id="editorPanel" aria-hidden="true">
+    <div class="editor-head">
+      <div><span>Modo edición</span><strong>Actualización semanal</strong></div>
+      <button id="closeEditor" type="button" aria-label="Cerrar">×</button>
+    </div>
+    <p>Carga la información semanal o ajusta cualquier texto marcado.</p>
+    <div class="import-block">
+      <strong>Actualizar informe</strong>
+      <label class="file-action import-main">Cargar Excel<input id="importExcel" type="file" accept=".xlsx,.xlsm"></label>
+      <label class="file-action import-main">Cargar PowerPoint<input id="importPowerPoint" type="file" accept=".pptx"></label>
+      <a class="template-link" href="formato-datos-informe-semanal-drive.xlsx" download>Descargar formato con evidencias Drive</a>
+      <a class="template-link" href="https://docs.google.com/spreadsheets/d/1JiflR-EcpwWQIwqD4pgenuSF4wyPLTS8JYuBKs4WtE8/edit" target="_blank" rel="noopener">Abrir formato en Google Sheets</a>
+      <small id="importStatus">Excel: cifras, CRM y enlaces públicos de Drive · PowerPoint: acciones y evidencias.</small>
+    </div>
+    <div class="editor-actions">
+      <button id="saveReport" class="primary-action" type="button">Guardar cambios</button>
+      <button id="exportReport" type="button">Exportar respaldo</button>
+      <label class="file-action">Importar respaldo<input id="importReport" type="file" accept=".json"></label>
+      <button id="printReport" type="button">Imprimir / PDF</button>
+      <button id="resetReport" class="danger-action" type="button">Restaurar ejemplo</button>
+    </div>
+    <small id="saveStatus">Los cambios se guardan en este navegador.</small>
+  </aside>
+
+  <input id="imagePicker" type="file" accept="image/*" hidden>
+  <input id="galleryPicker" type="file" accept="image/*" multiple hidden>
+
+  <template id="evidenceTemplate">
+    <article class="evidence-card" data-brand="levis" data-type="otros">
+      <div class="evidence-image">
+        <img class="replaceable-image" src="assets/papa-con-estilo.png" alt="Nueva evidencia">
+        <span class="image-edit-hint">Cambiar imagen</span>
+        <div class="card-brand editable" contenteditable="true">Levi’s</div>
+        <div class="card-action-type editable" contenteditable="true">Otros</div>
+      </div>
+      <div class="evidence-gallery">
+        <button class="gallery-thumb active" type="button"><img src="assets/papa-con-estilo.png" alt="Nueva evidencia"></button>
+        <button class="add-gallery-images" type="button">＋ Fotos</button>
+      </div>
+      <div class="evidence-body">
+        <div class="evidence-meta"><span class="editable" contenteditable="true">Canal / formato</span><time class="editable" contenteditable="true">Fecha</time></div>
+        <h3 class="editable" contenteditable="true">Título de la acción</h3>
+        <p class="editable" contenteditable="true">Describe brevemente la acción, su propósito y el resultado más importante.</p>
+        <div class="channel-list"><span class="editable" contenteditable="true">Canal 1</span><span class="editable" contenteditable="true">Canal 2</span></div>
+      </div>
+      <button class="delete-card" type="button" aria-label="Eliminar evidencia">×</button>
+    </article>
+  </template>
+
+  <div class="toast" id="toast" role="status"></div>
+  <div class="photo-viewer" id="photoViewer" aria-hidden="true">
+    <button type="button" class="photo-viewer-close" aria-label="Cerrar fotografía">×</button>
+    <img id="photoViewerImage" alt="">
+    <div class="photo-viewer-caption">
+      <strong id="photoViewerTitle"></strong>
+      <span id="photoViewerMeta"></span>
+    </div>
+  </div>
+  <script src="import-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
+INFORME SEMANAL DE MARKETING — UB CUARENTA
+
+FLUJO RECOMENDADO CADA SEMANA
+
+1. Abra index.html en Chrome o Edge.
+2. Pulse “Editar informe”.
+3. Descargue y complete “formato-datos-informe-semanal-drive.xlsx”.
+4. Cargue el Excel. Este actualiza:
+   - Resumen comercial.
+   - Ventas por marca.
+   - Ticket promedio y tasa de recompra.
+   - Resultados de Email, SMS y WhatsApp.
+   - Acciones escritas en la hoja “Acciones”.
+5. Cargue el PowerPoint semanal. Este reemplaza las acciones y extrae:
+   - Campañas y canales.
+   - Fechas y segmentos identificables.
+   - Fotografías y evidencias de las diapositivas.
+6. Revise el resultado y ajuste manualmente cualquier texto o fotografía.
+7. Pulse “Guardar cambios”.
+8. Use “Imprimir / PDF” para generar el informe de comité.
+
+CONSULTA DE ACCIONES
+
+- Filtre simultáneamente por marca y tipo de acción.
+- Tipos disponibles: CRM, BTL, Redes Sociales, Ficheros de Google, ATL, Vitrinas, Eventos y Otros.
+- Una acción puede pertenecer a varios tipos.
+- Haga clic sobre cualquier fotografía para verla ampliada.
+- En modo edición, haga clic sobre la fotografía para reemplazarla.
+- Cada campaña admite varias fotografías.
+- En modo edición, use “＋ Fotos” para seleccionar una o varias evidencias simultáneamente.
+- Puede cambiar la foto principal desde las miniaturas y eliminar imágenes individuales.
+- Al importar PowerPoint se conservan hasta 12 imágenes por diapositiva y se agrupan las evidencias de una misma campaña.
+
+ESTRUCTURA DEL EXCEL
+
+- Ventas: consolidado por marca y detalle por tienda.
+- Trafico: consolidado por marca, tasa de recompra y detalle por tienda.
+- Tráfico Detallado: tráfico exterior, tráfico individual y conversión diaria.
+- CRM: una fila por envío con métricas e ingresos atribuidos.
+- Acciones: campañas que se mostrarán como tarjetas y conservarán sus galerías fotográficas.
+- Evidencias: una fila por fotografía alojada en Google Drive.
+
+La landing reconoce directamente el formato “Data Informe Semanal 6.3 Junio.xlsx”; no es necesario renombrar las hojas ni reorganizar sus columnas.
+
+SEPARACIÓN DE LEVI’S
+
+- Levi’s Línea y Levi’s Outlet se presentan como unidades independientes en todo el informe.
+- En la hoja Ventas, escriba “Levis” para las tiendas de línea y “Levis Outlet” para las tiendas outlet.
+- En CRM, Acciones y Evidencias use “Levi’s Línea” o “Levi’s Outlet” según corresponda.
+- En el formato actual, las tiendas outlet identificadas son Providencia 22A, Bima y Toberín.
+- Las filas consolidadas de Ventas y Tráfico son la fuente prioritaria para ventas, ticket promedio, tráfico y recompra de cada grupo.
+- Si falta una fila consolidada, la landing calcula las ventas de Línea u Outlet a partir del detalle de sus tiendas como respaldo.
+
+FOTOGRAFÍAS DESDE GOOGLE DRIVE
+
+1. Suba cada fotografía a Google Drive.
+2. En Drive, use Compartir > Acceso general > Cualquier persona con el enlace > Lector.
+3. Copie el enlace del archivo, no el enlace de la carpeta.
+4. Pegue el enlace en la columna “Enlace de Drive” de la hoja Evidencias.
+5. Repita la marca y el nombre exacto de la campaña que aparece en la hoja Acciones.
+6. Use una fila por fotografía. Varias filas con la misma marca y campaña forman una galería.
+7. Use Orden para organizar las fotografías y Principal = Sí para seleccionar la portada.
+8. Descargue el Google Sheets como Excel y cárguelo en la landing.
+
+Las fotografías enlazadas desde Drive no consumen el almacenamiento interno del navegador.
+
+LECTURA GERENCIAL
+
+- El cumplimiento de ventas y tráfico por tienda utiliza semáforo: verde desde 100% y rojo por debajo de 100%.
+- Los porcentajes superiores a la meta se muestran completos; por ejemplo, 1,016 en Excel se presenta como 101,6%.
+- El tráfico detallado se consolida por punto de venta y permite elegir una tienda para revisar su tendencia diaria.
+- El filtro de acciones funciona únicamente por marca y también filtra Email, SMS, WhatsApp y el detalle de campañas CRM.
+
+IMPORTANTE
+
+- Cargue primero Excel y después PowerPoint.
+- El Excel es la fuente principal para cifras y KPI.
+- El PowerPoint es la fuente principal para acciones y evidencias visuales.
+- La tasa de recompra debe mantener la misma definición y ventana de tiempo cada semana.
+- Exporte un respaldo JSON si desea conservar una versión histórica editable.
+
+:root {
+  --ink:#111;
+  --paper:#f5f3ef;
+  --white:#fff;
+  --muted:#76736d;
+  --line:#dedbd4;
+  --red:#c8102e;
+  --green:#127a51;
+  --orange:#d97706;
+  --radius:24px;
+  --shadow:0 18px 50px rgba(18,18,18,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"DM Sans",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.shell{width:min(1180px,calc(100% - 48px));margin:0 auto}
+.topbar{height:76px;position:fixed;z-index:50;top:0;left:0;right:0;display:flex;align-items:center;gap:36px;padding:0 40px;background:rgba(245,243,239,.9);backdrop-filter:blur(18px);border-bottom:1px solid rgba(17,17,17,.08)}
+.company{width:188px;margin-right:auto}.company img{width:100%}
+.topbar nav{display:flex;gap:28px;font-size:13px;font-weight:600}
+.topbar nav a{position:relative;padding:10px 0;color:#57544f}
+.topbar nav a:after{content:"";position:absolute;left:0;right:100%;bottom:3px;height:2px;background:var(--ink);transition:.25s}
+.topbar nav a:hover:after{right:0}
+.edit-toggle{border:0;border-radius:100px;background:var(--ink);color:white;padding:11px 16px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700}
+.edit-dot{width:8px;height:8px;border:2px solid white;border-radius:50%}
+.hero{min-height:760px;height:100vh;padding:120px 5vw 48px;background:#e9e6e0;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.hero:before{content:"";position:absolute;width:600px;height:600px;border-radius:50%;background:#d8d3ca;right:-180px;top:50px;filter:blur(1px)}
+.hero-grid{width:min(1320px,100%);margin:auto;display:grid;grid-template-columns:1fr 1fr;align-items:center;position:relative;z-index:1}
+.eyebrow{margin:0 0 18px;text-transform:uppercase;letter-spacing:.17em;font-size:11px;font-weight:800;color:var(--red)}
+.hero h1,.section-heading h2{font-family:"Manrope",sans-serif}
+.hero h1{font-size:clamp(72px,9vw,142px);line-height:.82;letter-spacing:-.075em;margin:0 0 40px;font-weight:800}
+.hero h1 span{font-weight:500;color:transparent;-webkit-text-stroke:2px var(--ink)}
+.hero-period{font-size:20px;margin:0 0 18px;font-weight:500}
+.hero-meta{display:flex;gap:10px}
+.hero-meta span,.badge{border:1px solid #c6c1b8;border-radius:100px;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.hero-visual{height:510px;position:relative;display:flex;justify-content:center;align-items:center}
+.hero-rings{width:430px;height:430px;position:absolute}
+.hero-rings span{position:absolute;border:1px solid rgba(17,17,17,.18);border-radius:50%;inset:0;animation:spin 28s linear infinite}
+.hero-rings span:nth-child(2){inset:48px;border-style:dashed;animation-direction:reverse}.hero-rings span:nth-child(3){inset:96px}
+.hero-rings span:after{content:"";width:10px;height:10px;background:var(--red);position:absolute;border-radius:50%;top:48px;left:55px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero-stat{z-index:2;width:255px;height:255px;background:var(--ink);border-radius:50%;color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.25)}
+.hero-stat strong{font-family:"Manrope";font-size:76px;letter-spacing:-.07em;line-height:1;color:#fff}.hero-stat>span:last-child{font-size:11px;color:#aaa;margin-top:8px}
+.hero-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#ddd;margin-bottom:8px}
+.brand-stack{position:absolute;right:-20px;bottom:20px;width:190px;background:#fff;padding:18px 24px;border-radius:18px;box-shadow:var(--shadow);display:grid;gap:18px}
+.brand-stack img{max-height:27px;max-width:138px;object-fit:contain;margin:auto}
+.scroll-hint{font-size:12px;font-weight:700;display:flex;align-items:center;gap:12px;position:relative;z-index:2}.scroll-hint span{width:30px;height:30px;border:1px solid;border-radius:50%;display:grid;place-items:center}
+.section{padding:118px 0}
+.section-heading{display:flex;justify-content:space-between;gap:60px;align-items:flex-end;margin-bottom:48px}
+.section-heading h2{font-size:clamp(42px,5vw,68px);letter-spacing:-.055em;line-height:1;margin:0}
+.section-intro{width:min(440px,100%);font-size:17px;line-height:1.65;color:#66625d;margin:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi-card{background:#fff;border:1px solid #e5e1da;border-radius:var(--radius);padding:26px;min-height:210px;display:flex;flex-direction:column;transition:.25s}
+.kpi-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.kpi-card>span{font-size:12px;color:var(--muted);margin:26px 0 8px}.kpi-card strong{font-family:"Manrope";font-size:38px;letter-spacing:-.05em}.kpi-card small{margin-top:auto;color:#77736d}.kpi-icon{width:38px;height:38px;border-radius:12px;background:#efede8;display:grid;place-items:center;font-size:18px}
+.kpi-dark{background:var(--ink);color:white;border-color:var(--ink)}.kpi-dark .kpi-icon{background:#292929}.kpi-dark>span,.kpi-dark small{color:#aaa}
+.positive{color:#23a875!important}.warning{color:var(--orange)!important}
+.performance-grid{display:grid;grid-template-columns:1.55fr .75fr;gap:22px}
+.panel{background:#fff;border:1px solid #e4e0d9;border-radius:var(--radius);padding:30px}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px}.mini-label{font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:#8a867f;font-weight:700}.panel h3{font-family:"Manrope";margin:6px 0 0;font-size:24px;letter-spacing:-.03em}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;text-transform:uppercase;letter-spacing:.08em;font-size:9px;color:#8c8881;padding:12px;border-bottom:1px solid var(--line)}td{padding:17px 12px;border-bottom:1px solid #eeebe6}th:not(:first-child),td:not(:first-child){text-align:right}tfoot td{font-weight:800;border:0;padding-top:20px}.delta{display:inline-block;border-radius:100px;padding:5px 8px;font-size:11px;font-weight:800}.delta.up{color:var(--green);background:#e7f5ef}.delta.down{color:#b42318;background:#fff0ee}
+.progress-panel{display:flex;flex-direction:column}.radial{width:190px;height:190px;margin:0 auto 25px;border-radius:50%;background:conic-gradient(var(--red) calc(var(--progress)*1%),#ebe8e2 0);display:grid;place-items:center;position:relative}.radial:after{content:"";position:absolute;inset:16px;background:#fff;border-radius:50%}.radial div{z-index:1;text-align:center}.radial strong{display:block;font-family:"Manrope";font-size:35px}.radial span{font-size:10px;color:var(--muted)}
+.progress-detail{border-top:1px solid var(--line);padding:20px 0;display:flex;justify-content:space-between;font-size:12px}.progress-detail span{color:var(--muted)}
+.traffic-bar>div{display:flex;justify-content:space-between;font-size:11px;margin-bottom:10px}.bar{height:7px;background:#e8e5df;border-radius:10px;display:block;overflow:hidden}.bar i{display:block;height:100%;background:var(--ink);border-radius:10px}
+.brand-focus{margin-top:22px;background:#fff;border:1px solid #e4e0d9;border-radius:var(--radius);padding:30px}
+.brand-focus-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.brand-focus-grid article{border:1px solid #e4e0d9;border-radius:18px;padding:22px}
+.focus-brand{display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid #ece9e3;font-size:12px;font-weight:800}
+.focus-brand img{width:82px;height:28px;object-fit:contain;object-position:left center}
+.focus-metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+.focus-metrics span{display:block;color:#858079;font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+.focus-metrics strong{font-family:"Manrope";font-size:17px;line-height:1.2}
+.metric-note{font-size:10px;color:#8a867f;margin:18px 0 0}
+.commercial-detail{margin-top:22px;background:#fff;border:1px solid #e4e0d9;border-radius:var(--radius);padding:30px}.detail-controls{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px}.detail-brand-filters{max-width:100%}.detail-filter{white-space:nowrap;border:0;background:#f0ede8;border-radius:100px;padding:9px 14px;font-size:10px;font-weight:700;color:#625e58}.detail-filter.active{background:var(--ink);color:#fff}.detail-search{width:230px;border:1px solid #d9d5ce;background:#faf9f7;border-radius:100px;padding:10px 15px;font-size:11px;outline:none}.detail-search:focus{border-color:#777}.detail-table-wrap{max-height:520px;border:1px solid #e5e1da;border-radius:14px}.detail-table-wrap thead{position:sticky;top:0;background:#fff;z-index:3}.detail-table-wrap td,.detail-table-wrap th{white-space:nowrap}.detail-performance-table thead tr:first-child th{text-align:center;background:#ece8e1;color:#555}.detail-performance-table thead tr:first-child th:nth-child(2){background:#eee7e8;color:#9d1730}.detail-performance-table thead tr:first-child th:nth-child(3){background:#e7eeeb;color:#176345}.detail-performance-table thead tr:first-child th:first-child{text-align:left}.detail-performance-table thead tr:nth-child(2) th:nth-child(-n+6){background:#fff7f7}.detail-performance-table thead tr:nth-child(2) th:nth-child(n+7){background:#f4faf7}.detail-performance-table tbody tr:nth-child(even){background:#faf9f7}.detail-performance-table tbody tr:hover{background:#fff4dd}.detail-performance-table .store-cell{text-align:left!important;position:sticky;left:0;background:inherit;z-index:1;border-right:1px solid #ddd8d0;min-width:190px}.store-cell strong{display:block;font-size:12px}.store-cell small{color:#999;text-transform:uppercase;font-size:8px;letter-spacing:.08em}.compliance-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:100px;font-size:10px;font-weight:800}.compliance-pill i{width:8px;height:8px;border-radius:50%}.compliance-pill.met{background:#e7f5ed;color:#12623f}.compliance-pill.met i{background:#18a568}.compliance-pill.missed{background:#fff0ee;color:#a92b22}.compliance-pill.missed i{background:#e24b3b}.empty-table{text-align:center!important;color:#999;padding:38px!important}.daily-traffic-panel,.crm-campaign-detail{margin-top:22px;background:#fff;border:1px solid #e4e0d9;border-radius:var(--radius);overflow:hidden}.daily-traffic-panel summary,.crm-campaign-detail summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:22px 28px;cursor:pointer}.daily-traffic-panel summary::-webkit-details-marker,.crm-campaign-detail summary::-webkit-details-marker{display:none}.daily-traffic-panel summary span,.crm-campaign-detail summary span{display:flex;flex-direction:column;gap:4px}.daily-traffic-panel summary small,.crm-campaign-detail summary small{text-transform:uppercase;letter-spacing:.1em;color:#999;font-size:8px}.daily-traffic-panel summary strong,.crm-campaign-detail summary strong{font-family:"Manrope";font-size:18px}.daily-traffic-panel summary b,.crm-campaign-detail summary b{font-size:10px;background:#eeeae4;border-radius:100px;padding:8px 11px}.daily-traffic-panel[open] summary b,.crm-campaign-detail[open] summary b{background:#111;color:#fff}.daily-traffic-panel>.detail-table-wrap,.crm-campaign-detail>.detail-table-wrap{border-radius:0;border-left:0;border-right:0;border-bottom:0;margin:0}
+.traffic-dashboard-controls{display:flex;align-items:end;justify-content:space-between;gap:18px;padding:0 28px 18px}.traffic-dashboard-controls label{display:grid;gap:6px;text-transform:uppercase;letter-spacing:.08em;font-size:8px;color:#888}.traffic-store-select{min-width:320px;border:1px solid #d9d5ce;background:#faf9f7;border-radius:12px;padding:11px 14px;font-size:12px;color:#222}.traffic-summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 28px 18px}.traffic-summary-cards article{background:#f5f3ef;border-radius:14px;padding:16px}.traffic-summary-cards span{display:block;color:#888;font-size:9px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}.traffic-summary-cards strong{font-family:"Manrope";font-size:22px}.traffic-daily-chart{height:250px;margin:0 28px 22px;padding:24px 18px 12px;border:1px solid #e5e1da;border-radius:16px;display:flex;align-items:flex-end;gap:10px;background:linear-gradient(to top,#f7f5f1 1px,transparent 1px);background-size:100% 25%}.traffic-day{height:100%;flex:1;min-width:40px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative}.traffic-bar-column{width:min(34px,75%);height:185px;display:flex;align-items:flex-end}.traffic-bar-column i{display:block;width:100%;background:linear-gradient(#c8102e,#7e1124);border-radius:7px 7px 2px 2px;min-height:4px}.traffic-day small{margin-top:8px;color:#777;font-size:8px}.traffic-day-tooltip{display:none;position:absolute;bottom:45px;left:50%;transform:translateX(-50%);z-index:5;width:155px;background:#111;color:#fff;padding:10px;border-radius:9px;font-size:9px;box-shadow:0 8px 25px rgba(0,0,0,.25)}.traffic-day-tooltip span,.traffic-day-tooltip b{display:block;margin:2px 0}.traffic-day:hover .traffic-day-tooltip{display:block}.traffic-ranking{max-height:340px}.traffic-rank-row{cursor:pointer}.traffic-rank-row:hover,.traffic-rank-row.selected{background:#fff0e1!important}.traffic-rank-row.selected td:first-child{box-shadow:inset 4px 0 var(--red)}
+.brands-section{background:var(--ink);color:#fff}.light-heading .section-intro{color:#aaa}.brand-analysis{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.brand-analysis-card{min-height:430px;border-radius:28px;padding:30px;display:flex;flex-direction:column;position:relative;overflow:hidden}.brand-analysis-card:after{content:"";position:absolute;width:230px;height:230px;border:1px solid rgba(255,255,255,.15);border-radius:50%;right:-110px;bottom:-90px}.levis-card{background:#b9122e}.outlet-card{background:#48101a}.desigual-card{background:#f0eee9;color:#111}.desigual-card:after{border-color:rgba(0,0,0,.12)}.wiseman-card{background:#292929}
+.brand-card-top{display:flex;align-items:flex-start;justify-content:space-between;height:70px}.brand-card-top img{width:130px;height:48px;object-fit:contain;object-position:left center;filter:brightness(0) invert(1)}.desigual-card .brand-card-top img{filter:none}.brand-result{font-family:"Manrope";font-size:24px;font-weight:800}.brand-analysis-card h3{font-family:"Manrope";font-size:28px;line-height:1.15;letter-spacing:-.04em;margin:48px 0 18px}.brand-analysis-card p{line-height:1.65;font-size:14px;color:rgba(255,255,255,.73);margin:0}.desigual-card p{color:#666}.brand-tag{margin-top:auto;text-transform:uppercase;font-size:9px;font-weight:800;letter-spacing:.12em;border-top:1px solid rgba(255,255,255,.22);padding-top:18px}.desigual-card .brand-tag{border-color:#cbc7bf}
+.actions-heading{align-items:center;margin-bottom:26px}.action-filter-panel{background:#fff;border:1px solid #dfdcd5;border-radius:22px;padding:18px 20px;margin-bottom:32px}.filter-group{display:grid;grid-template-columns:115px 1fr;align-items:center;gap:14px}.filter-group+.filter-group{border-top:1px solid #ece9e3;margin-top:12px;padding-top:12px}.filter-label{text-transform:uppercase;letter-spacing:.1em;font-size:9px;font-weight:800;color:#837f78}.filters{display:flex;gap:5px;overflow:auto;padding:2px}.filter{white-space:nowrap;border:0;background:#f0ede8;border-radius:100px;padding:9px 14px;font-size:10px;font-weight:700;color:#625e58}.filter:hover{background:#e5e1da}.filter.active{background:var(--ink);color:#fff;box-shadow:0 4px 15px rgba(0,0,0,.12)}.filter-result{text-align:right;margin:10px 3px 0;font-size:10px;color:#918c84}
+.crm-dashboard{margin-bottom:34px}
+.crm-intro{background:var(--ink);color:#fff;border-radius:26px 26px 0 0;padding:30px 34px;display:flex;align-items:flex-end;justify-content:space-between;gap:40px}
+.crm-intro .eyebrow{margin-bottom:10px}.crm-intro h3{font-family:"Manrope";font-size:32px;letter-spacing:-.04em;margin:0}.crm-intro>p{max-width:460px;color:#aaa;font-size:13px;line-height:1.55;margin:0}
+.crm-channel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#d8d4cd;border-left:1px solid #d8d4cd;border-right:1px solid #d8d4cd}
+.crm-channel{background:#fff;padding:25px}
+.crm-channel.channel-empty{opacity:.4}
+.crm-channel-head{display:flex;align-items:center;gap:12px}.channel-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#f0ede7;font-size:18px}.crm-channel-head small{display:block;color:#918c84;font-size:8px;text-transform:uppercase;letter-spacing:.1em}.crm-channel-head h4{font-family:"Manrope";font-size:20px;margin:1px 0}.channel-status{margin-left:auto;border:1px solid #ddd8d0;border-radius:100px;padding:6px 8px;font-size:8px;font-weight:800}
+.crm-primary{padding:25px 0 20px}.crm-primary>span{display:block;color:#89847d;font-size:10px;margin-bottom:7px}.crm-primary strong{font-family:"Manrope";font-size:25px}
+.crm-metrics{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #e8e5df}
+.crm-metrics div{padding:15px 0;border-bottom:1px solid #e8e5df}.crm-metrics div:nth-child(odd){border-right:1px solid #e8e5df}.crm-metrics div:nth-child(even){padding-left:16px}
+.crm-metrics span{display:block;color:#908b84;font-size:9px;margin-bottom:5px}.crm-metrics b{font-family:"Manrope";font-size:15px}
+.email-channel .channel-icon{color:#b9122e;background:#fff0f1}.sms-channel .channel-icon{color:#315d91;background:#edf4fa}.whatsapp-channel .channel-icon{color:#18794e;background:#e9f7f0}
+.crm-brand-table{background:#fff;border:1px solid #d8d4cd;border-radius:0 0 26px 26px;padding:28px}.crm-brand-table .panel-head{margin-bottom:12px}.crm-brand-table h3{font-family:"Manrope";font-size:22px;margin:5px 0}
+.evidence-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}.evidence-card{background:#fff;border:1px solid #dfdcd5;border-radius:26px;overflow:hidden;position:relative;transition:.25s}.evidence-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}.evidence-card.hidden{display:none}.evidence-card.featured{grid-column:span 2;display:grid;grid-template-columns:1.2fr 1fr}.evidence-card.featured.hidden{display:none}
+.evidence-image{height:350px;position:relative;overflow:hidden;background:#ddd;cursor:zoom-in}.featured .evidence-image{height:100%;min-height:470px}.evidence-image img{width:100%;height:100%;object-fit:cover;transition:.35s}.evidence-card:hover .evidence-image img{transform:scale(1.025)}.card-brand{position:absolute;left:18px;top:18px;background:rgba(17,17,17,.82);color:white;border-radius:100px;padding:8px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;backdrop-filter:blur(8px)}.card-action-type{position:absolute;right:18px;top:18px;max-width:55%;background:rgba(255,255,255,.9);color:#111;border-radius:100px;padding:8px 11px;font-size:9px;font-weight:800;text-align:right;backdrop-filter:blur(8px)}
+.evidence-gallery{display:flex;gap:8px;padding:12px;background:#f5f3ef;overflow-x:auto;border-bottom:1px solid #dfdcd5}.featured .evidence-gallery{position:absolute;left:14px;right:14px;bottom:14px;z-index:4;border:0;border-radius:14px;background:rgba(245,243,239,.88);backdrop-filter:blur(12px)}.gallery-thumb{position:relative;flex:0 0 72px;width:72px;height:58px;padding:0;border:2px solid transparent;border-radius:9px;overflow:visible;background:#ddd}.gallery-thumb img{width:100%;height:100%;border-radius:7px;object-fit:cover}.gallery-thumb.active{border-color:var(--red)}.add-gallery-images{display:none;flex:0 0 72px;height:58px;border:1px dashed #8f8a82;border-radius:9px;background:transparent;color:#5d5953;font-size:10px;font-weight:800}.edit-mode .add-gallery-images{display:block}.remove-gallery-image{display:none;position:absolute;right:-6px;top:-7px;width:20px;height:20px;border-radius:50%;background:#b42318;color:#fff;font-size:14px;line-height:18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:3}.edit-mode .remove-gallery-image{display:block}.edit-mode .evidence-image{cursor:pointer}
+.evidence-body{padding:28px}.evidence-meta{display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.09em;font-size:9px;font-weight:800;color:#8a867f}.evidence-card h3{font-family:"Manrope";font-size:28px;letter-spacing:-.04em;margin:14px 0 10px}.evidence-card p{font-size:14px;color:#6d6963;line-height:1.6}.channel-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:22px}.channel-list span{font-size:10px;font-weight:700;border:1px solid #d9d5ce;padding:7px 10px;border-radius:100px}
+.event-results{display:grid;grid-template-columns:repeat(3,1fr);margin-top:30px;border-top:1px solid var(--line);padding-top:24px;gap:15px}.event-results strong{font-family:"Manrope";font-size:25px;display:block}.event-results span{font-size:9px;text-transform:uppercase;color:#88847e}
+.imported-results{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px}.imported-results span{background:#f0ede7;border-radius:9px;padding:8px 10px;font-size:10px;font-weight:700}
+.add-evidence{width:100%;border:1.5px dashed #bbb6ae;background:transparent;border-radius:22px;padding:28px;margin-top:22px;display:none;grid-template-columns:auto 1fr;column-gap:14px;text-align:left;align-items:center;color:#4f4b45}.add-evidence>span{grid-row:span 2;font-size:28px}.add-evidence b{font-size:13px}.add-evidence small{font-size:11px;color:#8c8881}.edit-mode .add-evidence{display:grid}.delete-card{display:none;position:absolute;top:16px;right:16px;width:34px;height:34px;border:0;border-radius:50%;background:#fff;color:#a51919;font-size:20px;box-shadow:0 4px 18px rgba(0,0,0,.18);z-index:3}.edit-mode .delete-card{display:block}
+.image-edit-hint{display:none;position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);z-index:2;background:#fff;color:#111;border-radius:100px;padding:10px 15px;font-size:11px;font-weight:800;box-shadow:0 5px 20px rgba(0,0,0,.22);pointer-events:none}.edit-mode .evidence-image{cursor:pointer}.edit-mode .evidence-image:after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.2);opacity:0;transition:.2s}.edit-mode .evidence-image:hover:after,.edit-mode .evidence-image:hover .image-edit-hint{opacity:1;display:block}
+.conclusions{background:#e9e6e0}.decision-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.decision-grid article{padding:28px;background:#f6f4f0;border-radius:22px;min-height:260px;display:flex;flex-direction:column}.decision-grid article>span{font-family:"Manrope";font-size:13px;font-weight:800;color:var(--red)}.decision-grid article div{margin-top:auto}.decision-grid h3{font-family:"Manrope";font-size:22px;letter-spacing:-.03em}.decision-grid p{color:#6f6b65;line-height:1.55;font-size:14px}.closing-note{margin-top:18px;background:var(--ink);color:white;border-radius:24px;padding:30px 36px;display:grid;grid-template-columns:220px 1fr;align-items:center}.closing-note span{text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:#aaa;font-weight:700}.closing-note p{font-family:"Manrope";font-size:22px;line-height:1.45;margin:0}
+footer{height:140px;padding:0 5vw;display:flex;align-items:center;gap:25px;background:#fff;font-size:11px;color:#777}footer img{width:170px;margin-right:auto}
+.editor-panel{position:fixed;right:24px;bottom:24px;width:370px;max-height:calc(100vh - 48px);overflow:auto;background:#191919;color:white;z-index:80;border-radius:24px;padding:22px;box-shadow:0 25px 80px rgba(0,0,0,.32);transform:translateY(calc(100% + 50px));transition:.35s}.editor-panel.open{transform:none}.editor-head{display:flex;justify-content:space-between;align-items:flex-start}.editor-head span{font-size:9px;text-transform:uppercase;letter-spacing:.13em;color:#999;display:block}.editor-head strong{font-size:16px}.editor-head button{border:0;background:#333;color:white;border-radius:50%;width:30px;height:30px;font-size:18px}.editor-panel>p{font-size:12px;line-height:1.5;color:#aaa}.editor-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.editor-actions button,.file-action{border:1px solid #414141;background:#292929;color:white;border-radius:10px;padding:10px;font-size:10px;font-weight:700;text-align:center}.editor-actions .primary-action{grid-column:span 2;background:white;color:#111}.editor-actions .danger-action{color:#ff948d}.file-action input{display:none}.editor-panel>small{display:block;color:#777;font-size:9px;margin-top:12px}
+.import-block{margin:16px 0;padding:15px;background:#242424;border:1px solid #383838;border-radius:14px;display:grid;grid-template-columns:1fr 1fr;gap:7px}.import-block>strong{grid-column:span 2;font-size:11px;margin-bottom:3px}.import-block .import-main{background:#fff;color:#111;border-color:#fff;padding:12px 8px}.template-link{grid-column:span 2;text-align:center;color:#ddd;border-bottom:1px solid #555;padding:7px 0 9px;font-size:10px;font-weight:700}.import-block small{grid-column:span 2;color:#888;font-size:9px;line-height:1.4}
+.editable{outline:0;border-radius:4px}.edit-mode .editable{outline:1px dashed rgba(200,16,46,.55);outline-offset:3px;cursor:text}.edit-mode .editable:focus{background:#fff4c9;color:#111;outline:2px solid #d09a00}.edit-mode .kpi-dark .editable:focus,.edit-mode .brands-section .editable:focus{padding:2px}
+.toast{position:fixed;left:50%;bottom:28px;z-index:100;background:#111;color:#fff;padding:12px 18px;border-radius:100px;font-size:12px;font-weight:700;opacity:0;transform:translate(-50%,20px);pointer-events:none;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
+.photo-viewer{position:fixed;z-index:120;inset:0;background:rgba(8,8,8,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;opacity:0;visibility:hidden;transition:.25s}.photo-viewer.open{opacity:1;visibility:visible}.photo-viewer>img{max-width:min(1200px,92vw);max-height:78vh;object-fit:contain;border-radius:10px;box-shadow:0 30px 90px rgba(0,0,0,.45)}.photo-viewer-close{position:absolute;right:30px;top:25px;width:44px;height:44px;border:1px solid #555;background:#222;color:#fff;border-radius:50%;font-size:26px}.photo-viewer-caption{width:min(1200px,92vw);display:flex;justify-content:space-between;gap:25px;color:#fff;margin-top:18px}.photo-viewer-caption strong{font-family:"Manrope";font-size:18px}.photo-viewer-caption span{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.1em}
+@media(max-width:900px){
+  .topbar{padding:0 20px}.topbar nav{display:none}.company{width:155px}
+  .hero{height:auto;min-height:800px}.hero-grid{grid-template-columns:1fr}.hero-visual{height:350px}.hero-rings{width:310px;height:310px}.hero-stat{width:190px;height:190px}.hero-stat strong{font-size:55px}.brand-stack{right:0;width:150px}
+  .section{padding:82px 0}.section-heading{align-items:flex-start;flex-direction:column;gap:20px}.section-intro{width:100%}
+  .kpi-grid{grid-template-columns:1fr 1fr}.performance-grid{grid-template-columns:1fr}.brand-analysis{grid-template-columns:1fr}.brand-analysis-card{min-height:360px}
+  .brand-focus-grid,.crm-channel-grid{grid-template-columns:1fr}.crm-channel-grid{gap:1px}.crm-intro{align-items:flex-start;flex-direction:column;gap:15px}.filter-group{grid-template-columns:1fr;gap:7px}
+  .detail-controls{align-items:stretch;flex-direction:column}.detail-search{width:100%}
+  .traffic-summary-cards{grid-template-columns:1fr 1fr}.traffic-dashboard-controls{align-items:stretch;flex-direction:column}.traffic-store-select{min-width:0;width:100%}
+  .evidence-card.featured{grid-template-columns:1fr}.featured .evidence-image{min-height:350px}.featured .evidence-gallery{position:static;border-radius:0;background:#f5f3ef}.decision-grid{grid-template-columns:1fr}.closing-note{grid-template-columns:1fr;gap:14px}
+}
+@media(max-width:600px){
+  .shell{width:min(100% - 28px,1180px)}.edit-toggle{padding:10px}.edit-toggle #editLabel{display:none}
+  .hero{padding:110px 20px 30px}.hero h1{font-size:68px}.hero-period{font-size:16px}.hero-visual{margin-top:20px}.brand-stack{display:none}
+  .kpi-grid,.evidence-grid{grid-template-columns:1fr}.evidence-card.featured{grid-column:auto;display:block}.evidence-image,.featured .evidence-image{height:280px;min-height:0}.event-results{grid-template-columns:1fr}
+  .brand-focus,.commercial-detail{padding:20px}.brand-focus-grid{grid-template-columns:1fr}.focus-metrics{grid-template-columns:1fr 1fr}.crm-intro{padding:25px 20px}.crm-brand-table{padding:20px}.crm-channel{padding:20px}
+  .traffic-summary-cards{grid-template-columns:1fr 1fr;padding:0 16px 16px}.traffic-dashboard-controls{padding:0 16px 16px}.traffic-daily-chart{margin:0 16px 18px;overflow-x:auto;justify-content:flex-start}.traffic-day{flex:0 0 42px}
+  .actions-heading{align-items:flex-start}.action-filter-panel{padding:14px}.filters{width:100%;overflow:auto}.panel{padding:20px}.editor-panel{width:calc(100% - 24px);right:12px;bottom:12px}.closing-note{padding:25px}.closing-note p{font-size:18px}.photo-viewer{padding:18px}.photo-viewer-caption{flex-direction:column;gap:5px}.photo-viewer-close{right:14px;top:14px}
+  footer{flex-wrap:wrap;height:auto;padding:35px 20px}footer p{width:100%;order:3}
+}
+@media print{
+  .topbar,.editor-panel,.add-evidence,.delete-card,.scroll-hint,.action-filter-panel,.toast,.photo-viewer{display:none!important}
+  body{background:white}.hero{height:720px;page-break-after:always}.section{padding:60px 0}.brands-section{print-color-adjust:exact;-webkit-print-color-adjust:exact}.evidence-card{break-inside:avoid}.evidence-grid{grid-template-columns:1fr 1fr}.conclusions{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
