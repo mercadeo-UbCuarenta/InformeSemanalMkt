@@ -53,6 +53,13 @@
     target.className = `compliance-pill ${met ? "met" : "missed"}`;
     target.innerHTML = `<i></i>${displayPercent(ratio)}`;
   };
+  const setVariationPill = (selector, previous, current) => {
+    const target = document.querySelector(selector);
+    if (!target) return;
+    const variation = number(previous) ? number(current) / number(previous) - 1 : 0;
+    target.className = `compliance-pill ${variation >= 0 ? "met" : "missed"}`;
+    target.innerHTML = `<i></i>${variation > 0 ? "+" : ""}${displayPercent(variation)}`;
+  };
   const displayDate = value => {
     if (typeof value === "number" && value > 30000) {
       const date = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
@@ -242,7 +249,7 @@
         const salesCurrent = number(pick(row, "ventas 2026", "ventas actual"));
         setText(`[data-brand="${key}"] [data-col="ventas-anterior"]`, displayMoney(salesPrevious));
         setText(`[data-brand="${key}"] [data-col="ventas-actual"]`, displayMoney(salesCurrent));
-        setCompliancePill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, salesPrevious ? salesCurrent / salesPrevious : 0);
+        setVariationPill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, salesPrevious, salesCurrent);
       }
       const focus = document.querySelector(`.brand-focus [data-brand="${key}"]`);
       if (focus) {
@@ -324,32 +331,49 @@
     });
   }
 
+  function renderCRMBrandInsights(data) {
+    const container = document.querySelector("#crmBrandInsights");
+    if (!container) return;
+    const brands = ["levis", "levis-outlet", "desigual", "wiseman"].filter(brand =>
+      data.some(row => brandKey(pick(row, "marca")) === brand)
+    );
+    container.innerHTML = brands.map(brand => {
+      const rows = data.filter(row => brandKey(pick(row, "marca")) === brand);
+      const sum = (...names) => rows.reduce((total, row) => total + number(pick(row, ...names)), 0);
+      const sent = sum("enviados", "mensajes enviados");
+      const transactions = rows.reduce((total, row) => total + number(pick(row, "transacciones online")) + number(pick(row, "transacciones offline")), 0);
+      const revenue = rows.reduce((total, row) => total + parseCurrency(pick(row, "ingresos online")) + parseCurrency(pick(row, "ingresos offline")), 0);
+      const conversion = weightedRate(rows, ["conversion", "conversión"], ["enviados"]);
+      const top = rows.slice().sort((a, b) => {
+        const result = row => parseCurrency(pick(row, "ingresos online")) + parseCurrency(pick(row, "ingresos offline")) || number(pick(row, "enviados"));
+        return result(b) - result(a);
+      })[0];
+      return `<article class="crm-brand-insight" data-brand="${brand}">
+        <div class="crm-brand-insight-head"><span>${escapeHtml(brandLabels[brand])}</span><b>${rows.length} ${rows.length === 1 ? "campaña" : "campañas"}</b></div>
+        <div class="crm-brand-insight-main"><strong>${displayNumber(sent)}</strong><span>contactos impactados</span></div>
+        <div class="crm-brand-insight-metrics">
+          <div><span>Conversión</span><b>${displayPercent(conversion)}</b></div>
+          <div><span>Ingresos</span><b>${displayMoney(revenue)}</b></div>
+        </div>
+        <p class="crm-brand-insight-foot">${displayNumber(transactions)} transacciones<strong>${escapeHtml(pick(top, "campana", "campaña") || "Sin campaña destacada")}</strong></p>
+      </article>`;
+    }).join("") || '<article class="crm-campaign-empty">Sin información CRM por marca.</article>';
+    const count = document.querySelector("#crmBrandInsightCount");
+    if (count) count.textContent = `${brands.length} ${brands.length === 1 ? "marca" : "marcas"}`;
+  }
+
   function applyCRM(rows) {
     if (rows.length < 2) return 0;
     const headers = rows[0];
     const data = rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).map(row => rowObject(headers, row));
     window.reportCRMData = data;
     renderCRMChannelCards(data);
+    renderCRMBrandInsights(data);
     window.filterCRMByBrand = brand => {
       const filtered = brand === "all" ? data : data.filter(row => brandKey(pick(row, "marca")) === brand);
       renderCRMChannelCards(filtered);
     };
 
-    const tbody = document.querySelector("#crmBrandRows");
-    if (tbody) {
-      tbody.innerHTML = ["levis", "levis-outlet", "desigual", "wiseman"].map(brand => {
-        const brandRows = data.filter(row => brandKey(pick(row, "marca")) === brand);
-        const channelSummary = channel => {
-          const selected = brandRows.filter(row => channelKey(pick(row, "canal")) === channel);
-          if (!selected.length) return "—";
-          const sent = selected.reduce((total, row) => total + number(pick(row, "enviados")), 0);
-          return `${selected.length} ${selected.length === 1 ? "acción" : "acciones"}${sent ? ` · ${displayNumber(sent)}` : ""}`;
-        };
-        const base = brandRows.reduce((total, row) => total + number(pick(row, "base impactada", "enviados")), 0);
-        const highlight = brandRows.map(row => pick(row, "resultado destacado", "campana", "campaña")).filter(Boolean).join(" · ") || "—";
-        return `<tr data-brand="${brand}"><td>${brandLabels[brand]}</td><td>${channelSummary("email")}</td><td>${channelSummary("sms")}</td><td>${channelSummary("whatsapp")}</td><td>${displayNumber(base)}</td><td>${escapeHtml(highlight)}</td></tr>`;
-      }).join("");
-    }
     const campaignBody = document.querySelector("#crmCampaignRows");
     if (campaignBody) {
       campaignBody.innerHTML = data.map(row => {
@@ -357,31 +381,33 @@
         const offlineTransactions = number(pick(row, "transacciones offline"));
         const onlineRevenue = parseCurrency(pick(row, "ingresos online"));
         const offlineRevenue = parseCurrency(pick(row, "ingresos offline"));
-        return `<tr data-brand="${brandKey(pick(row, "marca"))}">
-          <td>${escapeHtml(pick(row, "marca") || "—")}</td>
-          <td>${escapeHtml(pick(row, "canal") || "—")}</td>
-          <td>${escapeHtml(pick(row, "campana", "campaña") || "—")}</td>
-          <td>${escapeHtml(displayDate(pick(row, "fecha envio", "fecha envío")))}</td>
-          <td>${displayNumber(number(pick(row, "enviados")))}</td>
-          <td>${displayPercent(pick(row, "apertura"))}</td>
-          <td>${displayPercent(pick(row, "ctor", "ctr"))}</td>
-          <td>${displayPercent(pick(row, "conversion", "conversión"))}</td>
-          <td>${displayNumber(onlineTransactions + offlineTransactions)}</td>
-          <td>${displayMoney(onlineRevenue + offlineRevenue)}</td>
-        </tr>`;
-      }).join("") || '<tr><td colspan="10" class="empty-table">Sin campañas CRM.</td></tr>';
+        const brand = brandKey(pick(row, "marca"));
+        const channel = pick(row, "canal") || "CRM";
+        const revenue = onlineRevenue + offlineRevenue;
+        const transactions = onlineTransactions + offlineTransactions;
+        return `<article class="crm-campaign-card" data-brand="${brand}">
+          <div class="crm-campaign-top"><span>${escapeHtml(brandLabels[brand] || pick(row, "marca") || "Sin marca")}</span><b>${escapeHtml(channel)}</b></div>
+          <h4>${escapeHtml(pick(row, "campana", "campaña") || "Campaña CRM")}</h4>
+          <time>${escapeHtml(displayDate(pick(row, "fecha envio", "fecha envío")))}</time>
+          <div class="crm-campaign-kpis">
+            <div><span>Enviados</span><strong>${displayNumber(number(pick(row, "enviados")))}</strong></div>
+            <div><span>Apertura</span><strong>${displayPercent(pick(row, "apertura"))}</strong></div>
+            <div><span>CTOR</span><strong>${displayPercent(pick(row, "ctor", "ctr"))}</strong></div>
+            <div><span>Conversión</span><strong>${displayPercent(pick(row, "conversion", "conversión"))}</strong></div>
+          </div>
+          <div class="crm-campaign-result"><span>${displayNumber(transactions)} transacciones</span><strong>${displayMoney(revenue)}</strong></div>
+        </article>`;
+      }).join("") || '<article class="crm-campaign-empty">Sin campañas CRM.</article>';
+      const count = document.querySelector("#crmCampaignCount");
+      if (count) count.textContent = `${data.length} ${data.length === 1 ? "campaña" : "campañas"}`;
     }
     return data.length;
   }
 
   function restoreCRMData(data) {
     if (!Array.isArray(data) || !data.length) return;
-    window.reportCRMData = data;
-    renderCRMChannelCards(data);
-    window.filterCRMByBrand = brand => {
-      const filtered = brand === "all" ? data : data.filter(row => brandKey(pick(row, "marca")) === brand);
-      renderCRMChannelCards(filtered);
-    };
+    const headers = Array.from(new Set(data.flatMap(row => Object.keys(row))));
+    applyCRM([headers, ...data.map(row => headers.map(header => row[header] ?? ""))]);
   }
 
   const inferBrand = value => brandKey(value);
@@ -418,7 +444,7 @@
       setText('[data-field="brecha-meta"]', displayMoney(Math.max(0, number(totalSales[6]) - number(totalSales[3]))));
       setText('.sales-panel tfoot [data-col="ventas-anterior"]', displayMoney(number(totalSales[2])));
       setText('.sales-panel tfoot [data-col="ventas-actual"]', displayMoney(number(totalSales[3])));
-      setCompliancePill('.sales-panel tfoot [data-col="variacion"]', number(totalSales[2]) ? number(totalSales[3]) / number(totalSales[2]) : 0);
+      setVariationPill('.sales-panel tfoot [data-col="variacion"]', totalSales[2], totalSales[3]);
       const radial = document.querySelector(".radial");
       if (radial) radial.style.setProperty("--progress", Math.min(100, number(totalSales[7]) * 100));
     }
@@ -436,7 +462,7 @@
       if (sales) {
         setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-anterior"]`, displayMoney(number(sales[2])));
         setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-actual"]`, displayMoney(number(sales[3])));
-        setCompliancePill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, number(sales[2]) ? number(sales[3]) / number(sales[2]) : 0);
+        setVariationPill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, sales[2], sales[3]);
         const focus = document.querySelector(`.brand-focus [data-brand="${key}"]`);
         if (focus) focus.querySelector('[data-metric="ticket-promedio"]').textContent = displayMoney(number(sales[5]));
         const analysisVariation = document.querySelector(`.brand-analysis [data-brand="${key}"] [data-metric="variacion"]`);
@@ -493,7 +519,7 @@
 
       setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-anterior"]`, displayMoney(salesPrev));
       setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-actual"]`, displayMoney(salesNow));
-      setCompliancePill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, salesPrev ? salesNow / salesPrev : 0);
+      setVariationPill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, salesPrev, salesNow);
 
       const focus = document.querySelector(`.brand-focus [data-brand="${key}"]`);
       if (focus) {
@@ -521,35 +547,71 @@
   }
 
   function renderStorePerformance() {
-    const tbody = document.querySelector("#storePerformanceRows");
-    if (!tbody) return;
-    const selected = window.storeDetailBrand || "all";
-    const query = normalize(document.querySelector("#storeDetailSearch")?.value || "");
+    const container = document.querySelector("#storePerformanceRows");
+    if (!container) return;
     const source = window.reportStoreData || [];
     if (!source.length) {
-      let visible = 0;
-      tbody.querySelectorAll("tr[data-brand]").forEach(row => {
-        const store = normalize(row.querySelector(".store-cell strong")?.textContent || "");
-        const show = (selected === "all" || row.dataset.brand === selected) && (!query || store.includes(query));
-        row.hidden = !show;
-        if (show) visible++;
-      });
       const count = document.querySelector("#storeDetailCount");
-      if (count) count.textContent = `${visible} tiendas`;
+      if (count) count.textContent = "Sin información";
       return;
     }
-    const data = source.filter(item =>
-      (selected === "all" || item.brand === selected) && (!query || normalize(item.store).includes(query))
-    );
-    tbody.innerHTML = data.map(item => `<tr data-brand="${item.brand}">
-      <td class="store-cell"><strong>${escapeHtml(item.store)}</strong><small>${brandLabels[item.brand] || item.brand}</small></td>
-      <td>${displayMoney(number(item.salesPrev))}</td><td>${displayMoney(number(item.salesNow))}</td><td>${displayPercent(item.salesVar)}</td>
-      <td>${displayMoney(number(item.ticket))}</td><td>${displayMoney(number(item.salesGoal))}</td><td>${compliancePill(item.salesCompliance)}</td>
-      <td>${displayNumber(number(item.trafficPrev))}</td><td>${displayNumber(number(item.trafficNow))}</td><td>${item.trafficVar === "" || item.trafficVar === undefined ? "—" : displayPercent(item.trafficVar)}</td>
-      <td>${displayNumber(number(item.trafficGoal))}</td><td>${compliancePill(item.trafficCompliance)}</td>
-    </tr>`).join("") || '<tr><td colspan="12" class="empty-table">No hay tiendas para este filtro.</td></tr>';
+    const groups = Array.from(source.reduce((map, item) => {
+      if (!map.has(item.brand)) map.set(item.brand, []);
+      map.get(item.brand).push(item);
+      return map;
+    }, new Map()));
+    container.innerHTML = groups.map(([brand, stores]) => {
+      const totalSales = stores.reduce((sum, item) => sum + number(item.salesNow), 0);
+      const previousSales = stores.reduce((sum, item) => sum + number(item.salesPrev), 0);
+      const totalTraffic = stores.reduce((sum, item) => sum + number(item.trafficNow), 0);
+      const previousTraffic = stores.reduce((sum, item) => sum + number(item.trafficPrev), 0);
+      const best = stores.slice().sort((a, b) => number(b.salesVar) - number(a.salesVar))[0];
+      const validCompliance = stores.filter(item => item.salesCompliance !== "" && item.salesCompliance !== undefined && number(item.salesCompliance) > 0);
+      const opportunity = validCompliance.sort((a, b) => number(a.salesCompliance) - number(b.salesCompliance))[0];
+      const salesVariation = previousSales ? totalSales / previousSales - 1 : 0;
+      const trafficVariation = previousTraffic ? totalTraffic / previousTraffic - 1 : 0;
+      return `<article class="store-insight-card" data-brand="${brand}">
+        <div class="store-insight-head"><span>${escapeHtml(brandLabels[brand] || brand)}</span><b>${stores.length} ${stores.length === 1 ? "tienda" : "tiendas"}</b></div>
+        <div class="store-insight-main"><strong>${displayMoney(totalSales)}</strong><span>Venta semanal</span></div>
+        <div class="store-insight-metrics">
+          <div><span>Var. ventas</span><b class="${salesVariation >= 0 ? "positive" : "negative"}">${displayPercent(salesVariation)}</b></div>
+          <div><span>Tráfico</span><b>${displayNumber(totalTraffic)}</b><small>${displayPercent(trafficVariation)} vs. PY</small></div>
+        </div>
+        <div class="store-insight-notes"><p><span>Mejor evolución</span><strong>${escapeHtml(best?.store || "—")}</strong></p><p><span>Mayor oportunidad</span><strong>${escapeHtml(opportunity?.store || "—")}</strong></p></div>
+      </article>`;
+    }).join("");
     const count = document.querySelector("#storeDetailCount");
-    if (count) count.textContent = `${data.length} tiendas`;
+    if (count) count.textContent = `${source.length} tiendas · ${groups.length} marcas`;
+  }
+
+  function applyBrandSummaryFilter(brand = "all") {
+    const source = window.reportStoreData || [];
+    if (!source.length) return;
+    const rows = brand === "all" ? source : source.filter(item => item.brand === brand);
+    if (!rows.length) {
+      ["ventas-semana", "variacion-semana", "cumplimiento-meta", "meta-semana", "trafico-semana", "cumplimiento-trafico", "ticket-compania"]
+        .forEach(field => setText(`[data-field="${field}"]`, "—"));
+      return;
+    }
+    const sum = field => rows.reduce((total, item) => total + number(item[field]), 0);
+    const salesNow = sum("salesNow");
+    const salesPrev = sum("salesPrev");
+    const salesGoal = sum("salesGoal");
+    const trafficNow = sum("trafficNow");
+    const trafficGoal = sum("trafficGoal");
+    const salesWeight = rows.reduce((total, item) => total + Math.max(number(item.salesNow), 0), 0);
+    const ticket = salesWeight
+      ? rows.reduce((total, item) => total + number(item.ticket) * Math.max(number(item.salesNow), 0), 0) / salesWeight
+      : 0;
+    const variation = salesPrev ? salesNow / salesPrev - 1 : 0;
+    setText('[data-field="ventas-semana"]', displayMoney(salesNow));
+    setText('[data-field="variacion-semana"]', `${variation > 0 ? "+" : ""}${displayPercent(variation)}`);
+    setText('[data-field="variacion-compania"]', `${variation > 0 ? "+" : ""}${displayPercent(variation)}`);
+    setText('[data-field="meta-semana"]', displayMoney(salesGoal));
+    setText('[data-field="cumplimiento-meta"]', salesGoal ? displayPercent(salesNow / salesGoal) : "—");
+    setText('[data-field="trafico-semana"]', displayNumber(trafficNow));
+    setText('[data-field="cumplimiento-trafico"]', trafficGoal ? displayPercent(trafficNow / trafficGoal) : "—");
+    setText('[data-field="ticket-compania"]', displayMoney(ticket));
   }
 
   function applyDailyTraffic(rows) {
@@ -600,7 +662,7 @@
     const tbody = document.querySelector("#dailyTrafficRows");
     if (!tbody) return;
     const allStores = window.reportTrafficStores || [];
-    const brand = window.trafficDetailBrand || "all";
+    const brand = window.reportBrandFilter || "all";
     const stores = brand === "all" ? allStores : allStores.filter(item => item.brand === brand);
     const select = document.querySelector("#dailyTrafficStore");
     if (select) {
@@ -650,31 +712,11 @@
   }
 
   function restoreRuntimeData(runtime = {}) {
-    if (!document.querySelector(".traffic-brand-filters")) {
-      const controls = document.querySelector(".traffic-dashboard-controls");
-      if (controls) {
-        controls.insertAdjacentHTML("afterend", `<div class="filters traffic-brand-filters" aria-label="Filtrar tráfico por marca">
-          <button type="button" class="traffic-filter active" data-traffic-brand="all">Todas</button>
-          <button type="button" class="traffic-filter" data-traffic-brand="levis">Levi’s Línea</button>
-          <button type="button" class="traffic-filter" data-traffic-brand="levis-outlet">Levi’s Outlet</button>
-          <button type="button" class="traffic-filter" data-traffic-brand="desigual">Desigual</button>
-          <button type="button" class="traffic-filter" data-traffic-brand="wiseman">Wiseman</button>
-          <button type="button" class="traffic-filter" data-traffic-brand="digital">Digital</button>
-        </div>`);
-      }
-    }
     window.reportStoreData = Array.isArray(runtime.storeData) ? runtime.storeData : [];
     window.reportDailyTraffic = Array.isArray(runtime.dailyTraffic) ? runtime.dailyTraffic : [];
     window.reportTrafficStores = Array.isArray(runtime.trafficStores) ? runtime.trafficStores : [];
     window.selectedTrafficStore = runtime.selectedTrafficStore || window.reportTrafficStores[0]?.key || "";
-    window.storeDetailBrand = runtime.storeDetailBrand || "all";
-    window.trafficDetailBrand = runtime.trafficDetailBrand || "all";
-    document.querySelectorAll(".detail-filter").forEach(button =>
-      button.classList.toggle("active", button.dataset.detailBrand === window.storeDetailBrand)
-    );
-    document.querySelectorAll(".traffic-filter").forEach(button =>
-      button.classList.toggle("active", button.dataset.trafficBrand === window.trafficDetailBrand)
-    );
+    window.reportBrandFilter = runtime.globalBrand || "all";
     restoreCRMData(runtime.crmData);
     if (window.reportStoreData.length) renderStorePerformance();
     if (window.reportTrafficStores.length) renderDailyTraffic();
@@ -804,6 +846,7 @@
     const dailyTraffic = applyDailyTraffic(sheetByName(workbook, "Trafico Detallado"));
     const crm = applyCRM(sheetByName(workbook, "CRM"));
     const actions = applyActions(sheetByName(workbook, "Acciones"), sheetByName(workbook, "Evidencias"));
+    window.applyActionFilters?.();
     window.saveReport?.(false);
     status(`Excel aplicado: ${brands} marcas${stores ? `, ${stores} tiendas` : ""}, ${dailyTraffic} registros de tráfico, ${crm} campañas CRM${actions ? ` y ${actions} acciones` : ""}.`);
     window.showToast?.("Datos del Excel actualizados");
@@ -966,20 +1009,6 @@
   handle(document.querySelector("#importExcel"), importExcel);
   handle(document.querySelector("#importPowerPoint"), importPowerPoint);
   document.addEventListener("click", event => {
-    const detailFilter = event.target.closest(".detail-filter");
-    if (detailFilter) {
-      document.querySelectorAll(".detail-filter").forEach(button => button.classList.remove("active"));
-      detailFilter.classList.add("active");
-      window.storeDetailBrand = detailFilter.dataset.detailBrand;
-      renderStorePerformance();
-    }
-    const trafficFilter = event.target.closest(".traffic-filter");
-    if (trafficFilter) {
-      document.querySelectorAll(".traffic-filter").forEach(button => button.classList.remove("active"));
-      trafficFilter.classList.add("active");
-      window.trafficDetailBrand = trafficFilter.dataset.trafficBrand;
-      renderDailyTraffic();
-    }
     const trafficRow = event.target.closest(".traffic-rank-row");
     if (trafficRow) {
       window.selectedTrafficStore = trafficRow.dataset.trafficStore;
@@ -987,9 +1016,6 @@
       if (select) select.value = window.selectedTrafficStore;
       renderDailyTraffic();
     }
-  });
-  document.addEventListener("input", event => {
-    if (event.target.matches("#storeDetailSearch")) renderStorePerformance();
   });
   document.addEventListener("change", event => {
     if (!event.target.matches("#dailyTrafficStore")) return;
@@ -1000,4 +1026,5 @@
     importExcel, importPowerPoint, unzip, parseWorkbook, applySalesTrafficFormat,
     applyDailyTraffic, renderStorePerformance, renderDailyTraffic, restoreRuntimeData
   };
+  window.applyBrandSummaryFilter = applyBrandSummaryFilter;
 })();

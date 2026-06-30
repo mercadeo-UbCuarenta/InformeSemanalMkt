@@ -1,4 +1,4 @@
-const STORAGE_KEY = "ub40-marketing-report-v9";
+const STORAGE_KEY = "ub40-marketing-report-v12";
 const content = document.querySelector("#editableContent");
 const footer = document.querySelector("footer");
 const editToggle = document.querySelector("#editToggle");
@@ -8,6 +8,7 @@ const imagePicker = document.querySelector("#imagePicker");
 const galleryPicker = document.querySelector("#galleryPicker");
 const toast = document.querySelector("#toast");
 const photoViewer = document.querySelector("#photoViewer");
+const isPublished = location.protocol !== "file:";
 let editing = false;
 let activeImage = null;
 let activeGalleryCard = null;
@@ -33,6 +34,7 @@ function ensureEditableWeek() {
 }
 
 function setEditing(state) {
+  if (isPublished) state = false;
   editing = state;
   ensureEditableWeek();
   document.body.classList.toggle("edit-mode", state);
@@ -59,7 +61,7 @@ function saveReport(showConfirmation = true) {
 
 function createReportPayload() {
   return {
-    version: 3,
+    version: 5,
     updatedAt: new Date().toISOString(),
     content: content.innerHTML,
     footer: footer.innerHTML,
@@ -69,16 +71,18 @@ function createReportPayload() {
       trafficStores: window.reportTrafficStores || [],
       crmData: window.reportCRMData || [],
       selectedTrafficStore: window.selectedTrafficStore || "",
-      storeDetailBrand: window.storeDetailBrand || "all",
-      trafficDetailBrand: window.trafficDetailBrand || "all"
+      globalBrand: actionFilters.brand
     }
   };
 }
 
 function applyReportPayload(payload, label = "Último guardado") {
   if (!payload?.content) throw new Error("Formato inválido");
-  content.innerHTML = payload.content;
-  footer.innerHTML = payload.footer || originalFooter;
+  if (Number(payload.version) >= 5) {
+    content.innerHTML = payload.content;
+    footer.innerHTML = payload.footer || originalFooter;
+  }
+  actionFilters.brand = payload.runtime?.globalBrand || "all";
   ensureEditableWeek();
   window.ReportImporter?.restoreRuntimeData?.(payload.runtime || {});
   if (payload.updatedAt) {
@@ -115,6 +119,7 @@ function queueSave() {
 }
 
 function applyActionFilters() {
+  document.body.dataset.activeBrand = actionFilters.brand;
   let visible = 0;
   document.querySelectorAll(".evidence-card").forEach(card => {
     const brandMatch = actionFilters.brand === "all" || card.dataset.brand === actionFilters.brand;
@@ -122,20 +127,38 @@ function applyActionFilters() {
     card.classList.toggle("hidden", !show);
     if (show) visible++;
   });
-  document.querySelectorAll("#crmBrandRows tr, #crmCampaignRows tr").forEach(row => {
-    if (!row.dataset.brand) return;
-    row.hidden = actionFilters.brand !== "all" && row.dataset.brand !== actionFilters.brand;
+  let visibleCampaigns = 0;
+  document.querySelectorAll("#crmCampaignRows [data-brand]").forEach(card => {
+    const show = actionFilters.brand === "all" || card.dataset.brand === actionFilters.brand;
+    card.hidden = !show;
+    if (show) visibleCampaigns++;
   });
+  const campaignCount = document.querySelector("#crmCampaignCount");
+  if (campaignCount) campaignCount.textContent = `${visibleCampaigns} ${visibleCampaigns === 1 ? "campaña" : "campañas"}`;
+  let visibleCrmBrands = 0;
+  document.querySelectorAll(".crm-brand-insight[data-brand]").forEach(card => {
+    const show = actionFilters.brand === "all" || card.dataset.brand === actionFilters.brand;
+    card.hidden = !show;
+    if (show) visibleCrmBrands++;
+  });
+  const crmBrandCount = document.querySelector("#crmBrandInsightCount");
+  if (crmBrandCount) crmBrandCount.textContent = `${visibleCrmBrands} ${visibleCrmBrands === 1 ? "marca" : "marcas"}`;
+  document.querySelectorAll(".sales-panel tbody tr[data-brand], .brand-analysis [data-brand], .store-insight-card[data-brand]").forEach(item => {
+    item.hidden = actionFilters.brand !== "all" && item.dataset.brand !== actionFilters.brand;
+  });
+  const salesTotal = document.querySelector(".sales-panel tfoot");
+  if (salesTotal) salesTotal.hidden = actionFilters.brand !== "all";
+  document.querySelectorAll(".global-filter").forEach(button => {
+    button.classList.toggle("active", button.dataset.globalBrand === actionFilters.brand);
+  });
+  window.reportBrandFilter = actionFilters.brand;
+  window.ReportImporter?.renderDailyTraffic?.();
+  window.applyBrandSummaryFilter?.(actionFilters.brand);
   window.filterCRMByBrand?.(actionFilters.brand);
-  const result = document.querySelector("#filterResult");
-  if (result) result.textContent = `${visible} ${visible === 1 ? "acción visible" : "acciones visibles"} · CRM filtrado por marca`;
 }
 
 function resetActionFilters() {
   actionFilters.brand = "all";
-  document.querySelectorAll(".filter").forEach(button => {
-    button.classList.toggle("active", button.dataset.filter === "all");
-  });
   applyActionFilters();
 }
 
@@ -208,12 +231,7 @@ function hydrateGalleryControls(root = document) {
 }
 
 function exportReport() {
-  const payload = localStorage.getItem(STORAGE_KEY) || JSON.stringify({
-    version: 1,
-    updatedAt: new Date().toISOString(),
-    content: content.innerHTML,
-    footer: footer.innerHTML
-  });
+  const payload = localStorage.getItem(STORAGE_KEY) || JSON.stringify(createReportPayload());
   const blob = new Blob([payload], {type:"application/json"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -244,7 +262,7 @@ function importReport(file) {
   reader.onload = () => {
     try {
       const payload = JSON.parse(reader.result);
-      if (!payload.content) throw new Error("Formato inválido");
+      if (!payload.content || Number(payload.version) < 5) throw new Error("Respaldo de una versión anterior");
       content.innerHTML = payload.content;
       footer.innerHTML = payload.footer || originalFooter;
       ensureEditableWeek();
@@ -295,11 +313,9 @@ document.addEventListener("click", event => {
     return;
   }
 
-  const filter = event.target.closest(".filter");
-  if (filter) {
-    document.querySelectorAll('.filter[data-filter-group="brand"]').forEach(button => button.classList.remove("active"));
-    filter.classList.add("active");
-    actionFilters.brand = filter.dataset.filter;
+  const globalFilter = event.target.closest(".global-filter");
+  if (globalFilter) {
+    actionFilters.brand = globalFilter.dataset.globalBrand;
     applyActionFilters();
   }
 
@@ -399,6 +415,8 @@ document.addEventListener("keydown", event => {
 });
 
 async function initializeReport() {
+  document.body.classList.toggle("publication-mode", isPublished);
+  if (isPublished) editToggle.hidden = true;
   await restoreReport();
   ensureEditableWeek();
   hydrateGalleryControls();
@@ -409,3 +427,5 @@ initializeReport();
 window.applyActionFilters = applyActionFilters;
 window.resetActionFilters = resetActionFilters;
 window.hydrateGalleryControls = hydrateGalleryControls;
+window.saveReport = saveReport;
+window.showToast = showToast;
