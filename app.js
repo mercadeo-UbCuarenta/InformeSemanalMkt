@@ -1,4 +1,4 @@
-const STORAGE_KEY = "ub40-marketing-report-v12";
+const STORAGE_KEY = "ub40-marketing-report-v13";
 const content = document.querySelector("#editableContent");
 const footer = document.querySelector("footer");
 const editToggle = document.querySelector("#editToggle");
