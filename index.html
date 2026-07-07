@@ -8,16 +8,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
   <header class="topbar">
     <a class="company" href="#inicio" aria-label="Ir al inicio">
-      <img src="assets/logos/ub-cuarenta-light.png" alt="Comercializadora UB Cuarenta">
+      <img src="assets/ub-cuarenta.png" alt="Comercializadora UB Cuarenta">
     </a>
     <nav aria-label="Navegación del informe">
       <a href="#resumen">Resumen</a>
       <a href="#acciones">Acciones</a>
+      <a href="#presupuesto">Presupuesto</a>
       <a href="#marcas">Marcas</a>
       <a href="#conclusiones">Conclusiones</a>
     </nav>
@@ -53,7 +54,8 @@
             <span>Comité gerencial</span>
           </div>
         </div>
-        <div class="hero-visual">
+        <div class="hero-visual" title="Cambiar imagen de portada">
+          <span class="hero-image-edit-hint">Cambiar portada</span>
           <div class="hero-stat">
             <span class="hero-stat-label">Resultado compañía</span>
             <strong class="editable" data-field="variacion-compania" contenteditable="false">+12%</strong>
@@ -63,9 +65,9 @@
             <span></span><span></span><span></span>
           </div>
           <div class="brand-stack" aria-label="Marcas del portafolio">
-            <img src="assets/logos/levis-color.png" alt="Levi's">
-            <img src="assets/logos/desigual-dark.png" alt="Desigual">
-            <img src="assets/logos/wiseman-dark.png" alt="Wiseman">
+            <img src="assets/levis.png" alt="Levi's">
+            <img src="assets/desigual.png" alt="Desigual">
+            <img src="assets/wiseman.png" alt="Wiseman">
           </div>
         </div>
       </div>
@@ -190,7 +192,7 @@
         <div class="brand-analysis">
           <article class="brand-analysis-card levis-card" data-brand="levis">
             <div class="brand-card-top">
-              <img src="assets/logos/levis-light.png" alt="Levi's">
+              <img src="assets/levis.png" alt="Levi's">
               <span class="brand-result positive editable" data-metric="variacion" contenteditable="false">+15%</span>
             </div>
             <h3 class="editable" data-metric="titular" contenteditable="false">Levi’s Línea: lectura comercial independiente.</h3>
@@ -199,7 +201,7 @@
           </article>
           <article class="brand-analysis-card outlet-card" data-brand="levis-outlet">
             <div class="brand-card-top">
-              <img src="assets/logos/levis-light.png" alt="Levi's Outlet">
+              <img src="assets/levis.png" alt="Levi's Outlet">
               <span class="brand-result editable" data-metric="variacion" contenteditable="false">—</span>
             </div>
             <h3 class="editable" data-metric="titular" contenteditable="false">Levi’s Outlet: dinámica promocional propia.</h3>
@@ -208,7 +210,7 @@
           </article>
           <article class="brand-analysis-card desigual-card" data-brand="desigual">
             <div class="brand-card-top">
-              <img src="assets/logos/desigual-dark.png" alt="Desigual">
+              <img src="assets/desigual.png" alt="Desigual">
               <span class="brand-result negative editable" data-metric="variacion" contenteditable="false">−18%</span>
             </div>
             <h3 class="editable" data-metric="titular" contenteditable="false">Ventas privadas con espacio por capitalizar.</h3>
@@ -217,7 +219,7 @@
           </article>
           <article class="brand-analysis-card wiseman-card" data-brand="wiseman">
             <div class="brand-card-top">
-              <img src="assets/logos/wiseman-light.png" alt="Wiseman">
+              <img src="assets/wiseman.png" alt="Wiseman">
               <span class="brand-result negative editable" data-metric="variacion" contenteditable="false">−10%</span>
             </div>
             <h3 class="editable" data-metric="titular" contenteditable="false">Bima reveló un público con potencial.</h3>
@@ -407,6 +409,32 @@
       </button>
     </section>
 
+    <section class="section budget-section" id="presupuesto">
+      <div class="shell">
+        <div class="section-heading budget-heading">
+          <div><p class="eyebrow">04 - Inversión de mercadeo</p><h2>Ejecución de presupuesto</h2></div>
+          <p class="section-intro">Seguimiento de los gastos contabilizados, calculado sobre el valor total incluido IVA.</p>
+        </div>
+        <div class="budget-filter-panel" aria-label="Filtros de ejecucion de presupuesto">
+          <label>Desde<input id="budgetDateFrom" type="date"></label><label>Hasta<input id="budgetDateTo" type="date"></label>
+          <label>Marca<select id="budgetBrand"><option value="all">Todas</option></select></label><label>Tienda<select id="budgetStore"><option value="all">Todas</option></select></label>
+          <label>Proveedor<select id="budgetProvider"><option value="all">Todos</option></select></label><label>Tipo de documento<select id="budgetDocumentType"><option value="all">Todos</option></select></label>
+          <button id="budgetClearFilters" type="button">Limpiar filtros</button>
+        </div>
+        <div class="budget-kpis">
+          <article><span>Total ejecutado</span><strong id="budgetTotal">-</strong><small id="budgetPeriod">Carga el archivo de ejecucion</small></article>
+          <article><span>Movimientos</span><strong id="budgetMovements">-</strong><small>Registros contabilizados</small></article>
+          <article><span>Promedio por movimiento</span><strong id="budgetAverage">-</strong><small>Valor total promedio</small></article>
+          <article><span>Principal proveedor</span><strong id="budgetTopProvider">-</strong><small id="budgetTopProviderValue">Mayor ejecucion acumulada</small></article>
+        </div>
+        <div class="budget-analysis-grid">
+          <article class="budget-breakdown"><div class="panel-head"><div><span class="mini-label">Distribucion</span><h3>Ejecucion por marca</h3></div><span class="badge" id="budgetBrandCount">Sin datos</span></div><div id="budgetBrandBars" class="budget-bars"><p class="empty-table">Carga el archivo para visualizar la distribucion.</p></div></article>
+          <article class="budget-breakdown"><div class="panel-head"><div><span class="mini-label">Concentracion</span><h3>Principales proveedores</h3></div><span class="badge">Top 5</span></div><div id="budgetProviderBars" class="budget-bars"><p class="empty-table">Carga el archivo para visualizar proveedores.</p></div></article>
+        </div>
+        <details class="budget-detail"><summary><span><small>Soporte contable</small><strong>Detalle de movimientos</strong></span><b id="budgetResultCount">Sin datos</b></summary><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Documento</th><th>Concepto</th><th>Proveedor</th><th>Tienda</th><th>Marca</th><th>Total</th></tr></thead><tbody id="budgetRows"><tr><td colspan="7" class="empty-table">Carga el archivo de ejecucion de presupuesto.</td></tr></tbody></table></div></details>
+      </div>
+    </section>
+
     <section class="section conclusions" id="conclusiones">
       <div class="shell">
         <div class="section-heading">
@@ -438,7 +466,7 @@
   </main>
 
   <footer>
-    <img src="assets/logos/ub-cuarenta-light.png" alt="UB Cuarenta">
+    <img src="assets/ub-cuarenta.png" alt="UB Cuarenta">
     <p>Informe interno · Marketing y canal e-commerce</p>
     <span class="editable" contenteditable="false">Junio 2026</span>
   </footer>
@@ -453,9 +481,12 @@
       <strong>Actualizar informe</strong>
       <label class="file-action import-main">Cargar Excel<input id="importExcel" type="file" accept=".xlsx,.xlsm"></label>
       <label class="file-action import-main">Cargar PowerPoint<input id="importPowerPoint" type="file" accept=".pptx"></label>
+      <label class="file-action budget-import">Cargar ejecución de presupuesto<input id="importBudget" type="file" accept=".xlsx,.xlsm"></label>
+      <label class="file-action hero-image-action">Cambiar portada<input id="heroImagePicker" type="file" accept="image/*"></label>
       <a class="template-link" href="formato-datos-informe-semanal-drive.xlsx" download>Descargar formato con evidencias Drive</a>
       <a class="template-link" href="https://docs.google.com/spreadsheets/d/1JiflR-EcpwWQIwqD4pgenuSF4wyPLTS8JYuBKs4WtE8/edit" target="_blank" rel="noopener">Abrir formato en Google Sheets</a>
       <small id="importStatus">Excel: cifras, CRM y enlaces públicos de Drive · PowerPoint: acciones y evidencias.</small>
+      <small id="budgetImportStatus">Presupuesto: sin archivo cargado.</small>
     </div>
     <div class="editor-actions">
       <button id="saveReport" class="primary-action" type="button">Guardar cambios</button>
@@ -502,7 +533,8 @@
       <span id="photoViewerMeta"></span>
     </div>
   </div>
-  <script src="import-data.js?v=12"></script>
-  <script src="app.js?v=13"></script>
+  <script src="import-data.js?v=13"></script>
+  <script src="budget.js?v=2"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

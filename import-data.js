@@ -735,6 +735,28 @@
   };
   const actionKey = (brand, campaign) => `${brandKey(brand)}|${normalize(campaign)}`;
 
+  const campaignTokens = value => new Set(normalize(value)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(token => token.length > 2 && !["levis", "desigual", "wiseman", "outlets", "hasta", "todo", "off", "2026", "del", "los", "las", "para"].includes(token)));
+
+  function evidenceForAction(map, brand, campaign) {
+    const exact = map.get(actionKey(brand, campaign));
+    if (exact?.length) return exact;
+    const targetBrand = brandKey(brand);
+    const targetTokens = campaignTokens(campaign);
+    let best = {score:0, items:[]};
+    for (const [key, items] of map) {
+      const separator = key.indexOf("|");
+      if (key.slice(0, separator) !== targetBrand) continue;
+      const candidateTokens = campaignTokens(key.slice(separator + 1));
+      const shared = [...targetTokens].filter(token => candidateTokens.has(token)).length;
+      const score = shared / Math.max(1, Math.min(targetTokens.size, candidateTokens.size));
+      if (shared >= 2 && score > best.score) best = {score, items};
+    }
+    return best.score >= .5 ? best.items : [];
+  }
+
   function evidenceMap(rows) {
     if (rows.length < 2) return new Map();
     const headers = rows[0];
@@ -796,8 +818,8 @@
       <div class="evidence-image">
         <img class="replaceable-image" src="${image}" alt="${escapeHtml(title)}">
         <span class="image-edit-hint">Cambiar imagen</span>
-        <div class="card-brand">${brandLabels[brand] || escapeHtml(pick(row, "marca"))}</div>
-        <div class="card-action-type">${escapeHtml(categoryText)}</div>
+        <div class="card-brand editable" contenteditable="false">${brandLabels[brand] || escapeHtml(pick(row, "marca"))}</div>
+        <div class="card-action-type editable" contenteditable="false">${escapeHtml(categoryText)}</div>
       </div>
       <div class="evidence-gallery">
         ${images.map((source, index) => `<button class="gallery-thumb${index === 0 ? " active" : ""}" type="button"><img src="${source}" alt="${escapeHtml(title)} ${index + 1}"><span class="remove-gallery-image" aria-label="Eliminar foto">×</span></button>`).join("")}
@@ -807,8 +829,8 @@
         <div class="evidence-meta"><span>${escapeHtml(type)}</span><time class="editable" contenteditable="false">${escapeHtml(date)}</time></div>
         <h3 class="editable" contenteditable="false">${escapeHtml(title)}</h3>
         <p class="editable" contenteditable="false">${escapeHtml(description)}</p>
-        ${results.length ? `<div class="imported-results">${results.map(result => `<span>${escapeHtml(result)}</span>`).join("")}</div>` : ""}
-        <div class="channel-list">${channels.map(channel => `<span>${escapeHtml(channel)}</span>`).join("")}</div>
+        ${results.length ? `<div class="imported-results">${results.map(result => `<span class="editable" contenteditable="false">${escapeHtml(result)}</span>`).join("")}</div>` : ""}
+        <div class="channel-list">${channels.map(channel => `<span class="editable" contenteditable="false">${escapeHtml(channel)}</span>`).join("")}</div>
       </div>
       <button class="delete-card" type="button" aria-label="Eliminar evidencia">×</button>
     </article>`;
@@ -821,9 +843,10 @@
     if (!data.length) return 0;
     const links = evidenceMap(evidenceRows);
     const grid = document.querySelector("#evidenceGrid");
-    grid.innerHTML = data.map(row => actionCard(row, links.get(actionKey(pick(row, "marca"), pick(row, "titulo", "título", "campana", "campaña"))) || [])).join("");
+    grid.innerHTML = data.map(row => actionCard(row, evidenceForAction(links, pick(row, "marca"), pick(row, "titulo", "título", "campana", "campaña")))).join("");
     window.hydrateGalleryControls?.(grid);
     window.resetActionFilters?.();
+    window.refreshEditingState?.();
     return data.length;
   }
 
@@ -846,9 +869,13 @@
     const dailyTraffic = applyDailyTraffic(sheetByName(workbook, "Trafico Detallado"));
     const crm = applyCRM(sheetByName(workbook, "CRM"));
     const actions = applyActions(sheetByName(workbook, "Acciones"), sheetByName(workbook, "Evidencias"));
+    const budgetSheet = sheetByName(workbook, "Ejecucion Ppto").length
+      ? sheetByName(workbook, "Ejecucion Ppto")
+      : sheetByName(workbook, "Presupuesto");
+    const budget = budgetSheet.length ? window.BudgetModule?.applySheet?.(budgetSheet) || 0 : 0;
     window.applyActionFilters?.();
     window.saveReport?.(false);
-    status(`Excel aplicado: ${brands} marcas${stores ? `, ${stores} tiendas` : ""}, ${dailyTraffic} registros de tráfico, ${crm} campañas CRM${actions ? ` y ${actions} acciones` : ""}.`);
+    status(`Excel aplicado: ${brands} marcas${stores ? `, ${stores} tiendas` : ""}, ${dailyTraffic} registros de tráfico, ${crm} campañas CRM${actions ? `, ${actions} acciones` : ""}${budget ? ` y ${budget} movimientos de presupuesto` : ""}.`);
     window.showToast?.("Datos del Excel actualizados");
   }
 
@@ -975,6 +1002,7 @@
     grid.innerHTML = unique.map(actionCard).join("");
     window.hydrateGalleryControls?.(grid);
     window.resetActionFilters?.();
+    window.refreshEditingState?.();
     if (crmRows.length) {
       const headers = ["Marca", "Canal", "Campaña", "Fecha envío", "Segmento", "Enviados", "Entregados", "Tasa entrega", "Apertura", "CTR", "Leídos", "Respuestas", "Conversiones", "Bajas", "Base impactada", "Resultado destacado"];
       const crmSheet = [headers, ...crmRows.map(row => headers.map(header => row[normalize(header)] ?? ""))];
