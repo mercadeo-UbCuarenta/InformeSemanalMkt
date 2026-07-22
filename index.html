@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
   <header class="topbar">
@@ -16,11 +16,10 @@
       <img src="assets/ub-cuarenta.png" alt="Comercializadora UB Cuarenta">
     </a>
     <nav aria-label="Navegación del informe">
-      <a href="#resumen">Resumen</a>
-      <a href="#acciones">Acciones</a>
+      <a href="#resumen">Pulso</a>
+      <a href="#acciones">Ejecución</a>
       <a href="#presupuesto">Presupuesto</a>
       <a href="#marcas">Marcas</a>
-      <a href="#conclusiones">Conclusiones</a>
     </nav>
     <button class="edit-toggle" id="editToggle" type="button">
       <span class="edit-dot"></span>
@@ -33,8 +32,8 @@
       <span>Vista del informe</span>
       <div class="filters">
         <button type="button" class="global-filter active" data-global-brand="all">Todas</button>
-        <button type="button" class="global-filter" data-global-brand="levis">Levi’s Línea</button>
-        <button type="button" class="global-filter" data-global-brand="levis-outlet">Levi’s Outlet</button>
+        <button type="button" class="global-filter" data-global-brand="levis">Levi's Línea</button>
+        <button type="button" class="global-filter" data-global-brand="levis-outlet">Levi's Outlet</button>
         <button type="button" class="global-filter" data-global-brand="desigual">Desigual</button>
         <button type="button" class="global-filter" data-global-brand="wiseman">Wiseman</button>
         <button type="button" class="global-filter" data-global-brand="digital">Digital</button>
@@ -74,11 +73,13 @@
       <a class="scroll-hint" href="#resumen">Ver resultados <span>↓</span></a>
     </section>
 
+
+
     <section class="section shell" id="resumen">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">01 — Pulso del negocio</p>
-          <h2>Resumen ejecutivo</h2>
+          <p class="eyebrow">01 - Pulso del negocio</p>
+          <h2>1.1 Resumen ejecutivo</h2>
         </div>
       </div>
 
@@ -90,13 +91,13 @@
           <small><b class="editable" data-field="cumplimiento-meta" contenteditable="false">76,2%</b> de la meta · <b class="editable" data-field="meta-semana" contenteditable="false">$1.182,6M</b></small>
         </article>
         <article class="kpi-card">
-          <div class="kpi-icon">◎</div>
+          <div class="kpi-icon">◉</div>
           <span>Variación vs. PY</span>
           <strong class="editable" data-field="variacion-semana" contenteditable="false">+12%</strong>
           <small>Comparativo misma semana 2025</small>
         </article>
         <article class="kpi-card">
-          <div class="kpi-icon">◌</div>
+          <div class="kpi-icon">○</div>
           <span>Tráfico</span>
           <strong class="editable" data-field="trafico-semana" contenteditable="false">15.855</strong>
           <small><b class="warning editable" data-field="cumplimiento-trafico" contenteditable="false">79%</b> de la meta semanal</small>
@@ -113,7 +114,7 @@
         <article class="panel sales-panel">
           <div class="panel-head">
             <div>
-              <span class="mini-label">Desempeño comercial</span>
+              <span class="mini-label">1.2 Desempeño comercial</span>
               <h3>Ventas por unidad de negocio</h3>
             </div>
             <span class="badge">COP</span>
@@ -124,10 +125,10 @@
                 <tr><th>Unidad</th><th>2025</th><th>2026</th><th>Variación vs. PY</th></tr>
               </thead>
               <tbody>
-                <tr data-brand="levis"><td>Levi’s Línea</td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>—</span></td></tr>
-                <tr data-brand="levis-outlet"><td>Levi’s Outlet</td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>—</span></td></tr>
-                <tr data-brand="desigual"><td>Desigual</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$107,3M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$87,9M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>−18%</span></td></tr>
-                <tr data-brand="wiseman"><td>Wiseman</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$18,2M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$16,4M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>−10%</span></td></tr>
+                <tr data-brand="levis"><td>Levi's Línea</td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-</span></td></tr>
+                <tr data-brand="levis-outlet"><td>Levi's Outlet</td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-</span></td></tr>
+                <tr data-brand="desigual"><td>Desigual</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$107,3M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$87,9M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-18%</span></td></tr>
+                <tr data-brand="wiseman"><td>Wiseman</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$18,2M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$16,4M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-10%</span></td></tr>
                 <tr data-brand="digital"><td>Digital</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$6,0M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$21,0M</td><td><span class="compliance-pill met" data-col="variacion"><i></i>+253%</span></td></tr>
               </tbody>
               <tfoot>
@@ -142,12 +143,12 @@
       <div class="commercial-detail store-insights-panel">
         <div class="panel-head">
           <div>
-            <span class="mini-label">Lectura comercial</span>
-            <h3>Insights de ventas y tráfico por marca</h3>
+            <span class="mini-label">1.2 Desempeño comercial</span>
+            <h3>Performance comercial y tráfico por marca</h3>
           </div>
           <span class="badge" id="storeDetailCount">Resumen semanal</span>
         </div>
-        <p class="store-insights-intro">La relación entre tráfico, conversión y venta permite identificar si el resultado proviene de una mayor afluencia, de una mejor capacidad para convertir visitas o del valor generado en cada compra.</p>
+        <p class="store-insights-intro">Ficha completa por marca con venta, comparativo PY, tráfico, tráfico exterior, captura y lectura de mejor tienda y tienda con oportunidad.</p>
         <div class="store-insights-grid" id="storePerformanceRows">
           <article class="store-insight-empty"><span>Información por marca</span><strong>Carga el Excel para generar los insights.</strong></article>
         </div>
@@ -155,7 +156,7 @@
 
       <details class="daily-traffic-panel">
         <summary>
-          <span><small>Analítica diaria</small><strong>Tráfico exterior y conversión por punto de venta</strong></span>
+          <span><small>1.3 Analítica diaria</small><strong>Tráfico exterior y conversión por punto de venta</strong></span>
           <b>Ver detalle</b>
         </summary>
         <div class="traffic-dashboard-controls">
@@ -165,10 +166,10 @@
           <span class="badge" id="dailyTrafficCount">Sin datos</span>
         </div>
         <div class="traffic-summary-cards">
-          <article><span>Tráfico exterior</span><strong id="trafficExteriorTotal">—</strong></article>
-          <article><span>Tráfico individual</span><strong id="trafficIndividualTotal">—</strong></article>
-          <article><span>Conversión promedio</span><strong id="trafficConversionAvg">—</strong></article>
-          <article><span>Mejor día</span><strong id="trafficBestDay">—</strong></article>
+          <article><span>Tráfico exterior</span><strong id="trafficExteriorTotal">-</strong></article>
+          <article><span>Tráfico individual</span><strong id="trafficIndividualTotal">-</strong></article>
+          <article><span>Conversión promedio</span><strong id="trafficConversionAvg">-</strong></article>
+          <article><span>Mejor día</span><strong id="trafficBestDay">-</strong></article>
         </div>
         <div class="traffic-daily-chart" id="trafficDailyChart"><p class="empty-table">Carga el Excel para visualizar la tendencia diaria.</p></div>
         <div class="table-wrap detail-table-wrap traffic-ranking">
@@ -180,68 +181,32 @@
       </details>
     </section>
 
-    <section class="section brands-section" id="marcas">
-      <div class="shell">
-        <div class="section-heading light-heading">
-          <div>
-            <p class="eyebrow">03 — Lectura por marca</p>
-            <h2>Qué movió la semana</h2>
-          </div>
-          <p class="section-intro editable" contenteditable="false">Una lectura ejecutiva del desempeño, los aprendizajes y la oportunidad inmediata de cada marca.</p>
-        </div>
-        <div class="brand-analysis">
-          <article class="brand-analysis-card levis-card" data-brand="levis">
-            <div class="brand-card-top">
-              <img src="assets/levis.png" alt="Levi's">
-              <span class="brand-result positive editable" data-metric="variacion" contenteditable="false">+15%</span>
-            </div>
-            <h3 class="editable" data-metric="titular" contenteditable="false">Levi’s Línea: lectura comercial independiente.</h3>
-            <p class="editable" data-metric="lectura" contenteditable="false">“Papá con estilo” conectó con la base de datos y compensó la ausencia de dinámicas promocionales comparables con 2025.</p>
-            <div class="brand-tag">Tiendas de línea</div>
-          </article>
-          <article class="brand-analysis-card outlet-card" data-brand="levis-outlet">
-            <div class="brand-card-top">
-              <img src="assets/levis.png" alt="Levi's Outlet">
-              <span class="brand-result editable" data-metric="variacion" contenteditable="false">—</span>
-            </div>
-            <h3 class="editable" data-metric="titular" contenteditable="false">Levi’s Outlet: dinámica promocional propia.</h3>
-            <p class="editable" data-metric="lectura" contenteditable="false">Analizar por separado el comportamiento de Providencia 22A, Bima y Toberín permite leer correctamente su tráfico, precio y respuesta a promociones.</p>
-            <div class="brand-tag">Tiendas outlet</div>
-          </article>
-          <article class="brand-analysis-card desigual-card" data-brand="desigual">
-            <div class="brand-card-top">
-              <img src="assets/desigual.png" alt="Desigual">
-              <span class="brand-result negative editable" data-metric="variacion" contenteditable="false">−18%</span>
-            </div>
-            <h3 class="editable" data-metric="titular" contenteditable="false">Ventas privadas con espacio por capitalizar.</h3>
-            <p class="editable" data-metric="lectura" contenteditable="false">La apertura de la promoción a todo público redujo la sensación de exclusividad para las clientas recurrentes.</p>
-            <div class="brand-tag">Replantear exclusividad</div>
-          </article>
-          <article class="brand-analysis-card wiseman-card" data-brand="wiseman">
-            <div class="brand-card-top">
-              <img src="assets/wiseman.png" alt="Wiseman">
-              <span class="brand-result negative editable" data-metric="variacion" contenteditable="false">−10%</span>
-            </div>
-            <h3 class="editable" data-metric="titular" contenteditable="false">Bima reveló un público con potencial.</h3>
-            <p class="editable" data-metric="lectura" contenteditable="false">El tráfico extraordinario generado por un evento del centro comercial abre una ruta para nuevas alianzas y audiencias.</p>
-            <div class="brand-tag">Nueva audiencia</div>
-          </article>
-        </div>
-      </div>
-    </section>
 
-    <section class="section shell" id="acciones">
+
+<section class="section shell" id="acciones">
       <div class="section-heading actions-heading">
         <div>
-          <p class="eyebrow">02 — Ejecución y evidencias</p>
+          <p class="eyebrow">02 - Ejecución y evidencias</p>
           <h2>La gestión que movió la semana</h2>
         </div>
       </div>
-
+<section class="execution-summary-panel">
+        <div class="panel-head">
+          <div>
+            <span class="mini-label">2.1 Ejecuciones por marca</span>
+            <h3>Acciones activas de la semana</h3>
+          </div>
+          <span class="badge" id="executionSummaryCount">Sin datos</span>
+        </div>
+        <p class="store-insights-intro">Resumen gerencial de los frentes ejecutados por marca, agrupados en CRM, BTL, Marketing Digital, ATL y Activaciones de Marca.</p>
+        <div class="execution-summary-grid" id="executionSummaryRows">
+          <article class="crm-campaign-empty">Carga el Excel para construir el resumen de ejecuciones.</article>
+        </div>
+      </section>
       <div class="crm-dashboard">
         <div class="crm-intro">
           <div>
-            <p class="eyebrow">CRM · Primer frente de ejecución</p>
+            <p class="eyebrow">2.2 CRM</p>
             <h3>Relación que se convierte en resultado</h3>
           </div>
           <p class="editable" contenteditable="false">Alcance, respuesta y atribución comercial de las comunicaciones que conectaron las marcas con sus audiencias.</p>
@@ -249,7 +214,7 @@
         <div class="crm-channel-grid">
           <article class="crm-channel email-channel" data-channel="email">
             <div class="crm-channel-head">
-              <span class="channel-icon">＠</span>
+              <span class="channel-icon">@</span>
               <div><small>Canal</small><h4>Email</h4></div>
               <span class="channel-status">CRM</span>
             </div>
@@ -258,10 +223,10 @@
               <strong class="editable" data-metric="enviados" contenteditable="false">Por actualizar</strong>
             </div>
             <div class="crm-metrics">
-              <div><span>Tasa de apertura</span><b class="editable" data-metric="apertura" contenteditable="false">—%</b></div>
-              <div><span>CTOR</span><b class="editable" data-metric="ctr" contenteditable="false">—%</b></div>
-              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">—%</b></div>
-              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">—</b></div>
+              <div><span>Tasa de apertura</span><b class="editable" data-metric="apertura" contenteditable="false">-%</b></div>
+              <div><span>CTOR</span><b class="editable" data-metric="ctr" contenteditable="false">-%</b></div>
+              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">-%</b></div>
+              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">-</b></div>
             </div>
           </article>
           <article class="crm-channel sms-channel" data-channel="sms">
@@ -275,15 +240,15 @@
               <strong class="editable" data-metric="enviados" contenteditable="false">Por actualizar</strong>
             </div>
             <div class="crm-metrics">
-              <div><span>Tasa de rebote</span><b class="editable" data-metric="bounce" contenteditable="false">—%</b></div>
-              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">—%</b></div>
-              <div><span>Transacciones</span><b class="editable" data-metric="transactions" contenteditable="false">—</b></div>
-              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">—</b></div>
+              <div><span>Tasa de rebote</span><b class="editable" data-metric="bounce" contenteditable="false">-%</b></div>
+              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">-%</b></div>
+              <div><span>Transacciones</span><b class="editable" data-metric="transactions" contenteditable="false">-</b></div>
+              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">-</b></div>
             </div>
           </article>
           <article class="crm-channel whatsapp-channel" data-channel="whatsapp">
             <div class="crm-channel-head">
-              <span class="channel-icon">◉</span>
+              <span class="channel-icon">◎</span>
               <div><small>Canal</small><h4>WhatsApp</h4></div>
               <span class="channel-status">CRM</span>
             </div>
@@ -292,10 +257,10 @@
               <strong class="editable" data-metric="enviados" contenteditable="false">Por actualizar</strong>
             </div>
             <div class="crm-metrics">
-              <div><span>Leídos</span><b class="editable" data-metric="leidos" contenteditable="false">—%</b></div>
-              <div><span>Respuestas</span><b class="editable" data-metric="respuestas" contenteditable="false">—</b></div>
-              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">—%</b></div>
-              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">—</b></div>
+              <div><span>Leídos</span><b class="editable" data-metric="leidos" contenteditable="false">-%</b></div>
+              <div><span>Respuestas</span><b class="editable" data-metric="respuestas" contenteditable="false">-</b></div>
+              <div><span>Conversión</span><b class="editable" data-metric="conversion-rate" contenteditable="false">-%</b></div>
+              <div><span>Ingresos atribuidos</span><b class="editable" data-metric="revenue" contenteditable="false">-</b></div>
             </div>
           </article>
         </div>
@@ -319,27 +284,36 @@
         </section>
       </div>
 
+      <section class="digital-pauta-panel">
+        <div class="crm-campaign-heading">
+          <span><small>2.3 Marketing digital</small><strong>Pauta Digital</strong></span>
+          <b id="digitalPautaCount">Sin datos</b>
+        </div>
+        <div class="digital-pauta-grid" id="digitalPautaRows">
+          <article class="crm-campaign-empty">Carga el Excel para visualizar acciones de pauta digital.</article>
+        </div>
+      </section>
       <div class="evidence-section-heading">
-        <div><span>Segundo frente de ejecución</span><h3>Otras acciones y registro fotográfico</h3></div>
-        <p>Activaciones, eventos, vitrinas y contenidos que complementaron la gestión relacional.</p>
+        <div><span>2.4 Evidencias</span><h3>Registro fotográfico y soportes</h3></div>
+        <p>Soportes visuales de campañas, piezas, vitrinas, activaciones y contenidos desplegados por marca.</p>
       </div>
       <div class="evidence-grid" id="evidenceGrid">
         <article class="evidence-card featured" data-brand="levis" data-type="eventos btl">
           <div class="evidence-image">
             <img class="replaceable-image" src="assets/evento-colina-1.jpg" alt="Evento de relanzamiento Levi's Colina">
             <span class="image-edit-hint">Cambiar foto</span>
-            <div class="card-brand">Levi’s Línea</div>
+            <div class="card-brand">Levi's Línea</div>
             <div class="card-action-type">Evento / BTL</div>
           </div>
           <div class="evidence-gallery">
-            <button class="gallery-thumb active" type="button"><img src="assets/evento-colina-1.jpg" alt="Relanzamiento Levi’s Colina 1"></button>
-            <button class="gallery-thumb" type="button"><img src="assets/evento-colina-2.jpg" alt="Relanzamiento Levi’s Colina 2"></button>
-            <button class="gallery-thumb" type="button"><img src="assets/evento-colina-3.jpg" alt="Relanzamiento Levi’s Colina 3"></button>
-            <button class="add-gallery-images" type="button">＋ Fotos</button>
+            <button class="gallery-thumb active" type="button"><img src="assets/evento-colina-1.jpg" alt="Relanzamiento Levi's Colina 1"></button>
+            <button class="gallery-thumb" type="button"><img src="assets/evento-colina-2.jpg" alt="Relanzamiento Levi's Colina 2"></button>
+            <button class="gallery-thumb" type="button"><img src="assets/evento-colina-3.jpg" alt="Relanzamiento Levi's Colina 3"></button>
+            <button class="add-gallery-images" type="button">+ Fotos</button>
           </div>
           <div class="evidence-body">
             <div class="evidence-meta"><span>Evento</span><time class="editable" contenteditable="false">12 de junio</time></div>
-            <h3 class="editable" contenteditable="false">Relanzamiento Levi’s Colina</h3>
+            <h3 class="editable" contenteditable="false">Relanzamiento Levi's Colina</h3>
             <p class="editable" contenteditable="false">Experiencia de reapertura con catering, DJ, fotocabina, creadores de contenido y una dinámica de chaquetas Trucker.</p>
             <div class="event-results">
               <div><strong class="editable" contenteditable="false">+29%</strong><span>ventas vs. 2025</span></div>
@@ -354,12 +328,12 @@
           <div class="evidence-image">
             <img class="replaceable-image" src="assets/papa-con-estilo.png" alt="Campaña Papá con estilo">
             <span class="image-edit-hint">Cambiar imagen</span>
-            <div class="card-brand">Levi’s Línea</div>
+            <div class="card-brand">Levi's Línea</div>
             <div class="card-action-type">CRM</div>
           </div>
-          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/papa-con-estilo.png" alt="Papá con estilo"></button><button class="add-gallery-images" type="button">＋ Fotos</button></div>
+          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/papa-con-estilo.png" alt="Papá con estilo"></button><button class="add-gallery-images" type="button">+ Fotos</button></div>
           <div class="evidence-body">
-            <div class="evidence-meta"><span>CRM + social</span><time class="editable" contenteditable="false">09–14 junio</time></div>
+            <div class="evidence-meta"><span>CRM + social</span><time class="editable" contenteditable="false">09-14 junio</time></div>
             <h3 class="editable" contenteditable="false">Papá con estilo</h3>
             <p class="editable" contenteditable="false">Email, ficheros de Google por tienda y publicaciones en las redes corporativas.</p>
             <div class="channel-list"><span>Email</span><span>Social</span><span>Tiendas</span></div>
@@ -374,10 +348,10 @@
             <div class="card-brand">Desigual</div>
             <div class="card-action-type">CRM</div>
           </div>
-          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/ventas-privadas.png" alt="Ventas privadas Desigual"></button><button class="add-gallery-images" type="button">＋ Fotos</button></div>
+          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/ventas-privadas.png" alt="Ventas privadas Desigual"></button><button class="add-gallery-images" type="button">+ Fotos</button></div>
           <div class="evidence-body">
-            <div class="evidence-meta"><span>Campaña 360</span><time class="editable" contenteditable="false">08–14 junio</time></div>
-            <h3 class="editable" contenteditable="false">Rebajas — Ventas privadas</h3>
+            <div class="evidence-meta"><span>Campaña 360</span><time class="editable" contenteditable="false">08-14 junio</time></div>
+            <h3 class="editable" contenteditable="false">Rebajas - Ventas privadas</h3>
             <p class="editable" contenteditable="false">Activación en email, SMS, vitrinas, fichas de tienda y redes sociales.</p>
             <div class="channel-list"><span>Email</span><span>SMS</span><span>Vitrinas</span></div>
           </div>
@@ -391,10 +365,10 @@
             <div class="card-brand">Wiseman</div>
             <div class="card-action-type">CRM</div>
           </div>
-          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/wiseman-papa.png" alt="El papá titular Wiseman"></button><button class="add-gallery-images" type="button">＋ Fotos</button></div>
+          <div class="evidence-gallery"><button class="gallery-thumb active" type="button"><img src="assets/wiseman-papa.png" alt="El papá titular Wiseman"></button><button class="add-gallery-images" type="button">+ Fotos</button></div>
           <div class="evidence-body">
-            <div class="evidence-meta"><span>CRM + retail</span><time class="editable" contenteditable="false">13–16 junio</time></div>
-            <h3 class="editable" contenteditable="false">El papá titular — 40% OFF</h3>
+            <div class="evidence-meta"><span>CRM + retail</span><time class="editable" contenteditable="false">13-16 junio</time></div>
+            <h3 class="editable" contenteditable="false">El papá titular - 40% OFF</h3>
             <p class="editable" contenteditable="false">Comunicación por email, SMS, WhatsApp, fichas de tienda y redes corporativas.</p>
             <div class="channel-list"><span>WhatsApp</span><span>SMS</span><span>Social</span></div>
           </div>
@@ -403,16 +377,16 @@
       </div>
 
       <button class="add-evidence" id="addEvidence" type="button">
-        <span>＋</span>
+        <span>+</span>
         <b>Agregar nueva evidencia</b>
         <small>Foto, campaña, canal y resultado</small>
       </button>
     </section>
 
-    <section class="section budget-section" id="presupuesto">
+<section class="section budget-section" id="presupuesto">
       <div class="shell">
         <div class="section-heading budget-heading">
-          <div><p class="eyebrow">04 - Inversión de mercadeo</p><h2>Ejecución de presupuesto</h2></div>
+          <div><p class="eyebrow">03 - Inversión de mercadeo</p><h2>Ejecución de presupuesto</h2></div>
           <p class="section-intro">Seguimiento de los gastos contabilizados, calculado sobre el valor total incluido IVA.</p>
         </div>
         <div class="budget-filter-panel" aria-label="Filtros de ejecucion de presupuesto">
@@ -435,34 +409,56 @@
       </div>
     </section>
 
-    <section class="section conclusions" id="conclusiones">
+<section class="section brands-section" id="marcas">
       <div class="shell">
-        <div class="section-heading">
+        <div class="section-heading light-heading">
           <div>
-            <p class="eyebrow">04 — Decisiones</p>
-            <h2>Conclusiones y próximos pasos</h2>
+            <p class="eyebrow">04 - Lectura por marca</p>
+            <h2>Qué movió la semana</h2>
           </div>
+          <p class="section-intro editable" contenteditable="false">Una lectura ejecutiva del desempeño, los aprendizajes y la oportunidad inmediata de cada marca.</p>
         </div>
-        <div class="decision-grid">
-          <article>
-            <span>01</span>
-            <div><h3 class="editable" contenteditable="false">Escalar lo que funciona</h3><p class="editable" contenteditable="false">Replicar la segmentación y el tono de “Papá con estilo” en futuras fechas comerciales de Levi’s.</p></div>
+        <div class="brand-analysis">
+          <article class="brand-analysis-card levis-card" data-brand="levis">
+            <div class="brand-card-top">
+              <img src="assets/levis.png" alt="Levi's">
+              <span class="brand-result positive editable" data-metric="variacion" contenteditable="false">+15%</span>
+            </div>
+            <h3 class="editable" data-metric="titular" contenteditable="false">Levi's Línea: lectura comercial independiente.</h3>
+            <p class="editable" data-metric="lectura" contenteditable="false">"Papá con estilo" conectó con la base de datos y compensó la ausencia de dinámicas promocionales comparables con 2025.</p>
+            <div class="brand-tag">Tiendas de línea</div>
           </article>
-          <article>
-            <span>02</span>
-            <div><h3 class="editable" contenteditable="false">Recuperar exclusividad</h3><p class="editable" contenteditable="false">Diseñar una primera ventana realmente privada para la base fiel de Desigual antes de abrir al público general.</p></div>
+          <article class="brand-analysis-card outlet-card" data-brand="levis-outlet">
+            <div class="brand-card-top">
+              <img src="assets/levis.png" alt="Levi's Outlet">
+              <span class="brand-result editable" data-metric="variacion" contenteditable="false">-</span>
+            </div>
+            <h3 class="editable" data-metric="titular" contenteditable="false">Levi's Outlet: dinámica promocional propia.</h3>
+            <p class="editable" data-metric="lectura" contenteditable="false">Analizar por separado el comportamiento de Providencia 22A, Bima y Toberín permite leer correctamente su tráfico, precio y respuesta a promociones.</p>
+            <div class="brand-tag">Tiendas outlet</div>
           </article>
-          <article>
-            <span>03</span>
-            <div><h3 class="editable" contenteditable="false">Convertir tráfico en aprendizaje</h3><p class="editable" contenteditable="false">Probar alianzas y contenidos para la audiencia masculina identificada en Wiseman Bima.</p></div>
+          <article class="brand-analysis-card desigual-card" data-brand="desigual">
+            <div class="brand-card-top">
+              <img src="assets/desigual.png" alt="Desigual">
+              <span class="brand-result negative editable" data-metric="variacion" contenteditable="false">-18%</span>
+            </div>
+            <h3 class="editable" data-metric="titular" contenteditable="false">Ventas privadas con espacio por capitalizar.</h3>
+            <p class="editable" data-metric="lectura" contenteditable="false">La apertura de la promoción a todo público redujo la sensación de exclusividad para las clientas recurrentes.</p>
+            <div class="brand-tag">Replantear exclusividad</div>
           </article>
-        </div>
-        <div class="closing-note">
-          <span>Foco próxima semana</span>
-          <p class="editable" contenteditable="false">Aumentar tráfico calificado sin depender únicamente del descuento, reforzando CRM, experiencias en tienda y alianzas con centros comerciales.</p>
+          <article class="brand-analysis-card wiseman-card" data-brand="wiseman">
+            <div class="brand-card-top">
+              <img src="assets/wiseman.png" alt="Wiseman">
+              <span class="brand-result negative editable" data-metric="variacion" contenteditable="false">-10%</span>
+            </div>
+            <h3 class="editable" data-metric="titular" contenteditable="false">Bima reveló un público con potencial.</h3>
+            <p class="editable" data-metric="lectura" contenteditable="false">El tráfico extraordinario generado por un evento del centro comercial abre una ruta para nuevas alianzas y audiencias.</p>
+            <div class="brand-tag">Nueva audiencia</div>
+          </article>
         </div>
       </div>
     </section>
+
   </main>
 
   <footer>
@@ -507,12 +503,12 @@
       <div class="evidence-image">
         <img class="replaceable-image" src="assets/papa-con-estilo.png" alt="Nueva evidencia">
         <span class="image-edit-hint">Cambiar imagen</span>
-        <div class="card-brand editable" contenteditable="true">Levi’s</div>
+        <div class="card-brand editable" contenteditable="true">Levi's</div>
         <div class="card-action-type editable" contenteditable="true">Otros</div>
       </div>
       <div class="evidence-gallery">
         <button class="gallery-thumb active" type="button"><img src="assets/papa-con-estilo.png" alt="Nueva evidencia"></button>
-        <button class="add-gallery-images" type="button">＋ Fotos</button>
+        <button class="add-gallery-images" type="button">+ Fotos</button>
       </div>
       <div class="evidence-body">
         <div class="evidence-meta"><span class="editable" contenteditable="true">Canal / formato</span><time class="editable" contenteditable="true">Fecha</time></div>
@@ -533,8 +529,19 @@
       <span id="photoViewerMeta"></span>
     </div>
   </div>
-  <script src="import-data.js?v=13"></script>
+  <script src="import-data.js?v=15"></script>
   <script src="budget.js?v=2"></script>
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+

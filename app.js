@@ -1,4 +1,4 @@
-const STORAGE_KEY = "ub40-marketing-report-v13";
+﻿const STORAGE_KEY = "ub40-marketing-report-v13";
 const content = document.querySelector("#editableContent");
 const footer = document.querySelector("footer");
 const editToggle = document.querySelector("#editToggle");
@@ -24,10 +24,39 @@ function ensureBudgetSection() {
   const source = document.createElement("div");
   source.innerHTML = originalContent;
   const budget = source.querySelector("#presupuesto");
-  const conclusions = content.querySelector("#conclusiones");
-  if (budget) content.insertBefore(budget, conclusions || null);
+  const marcas = content.querySelector("#marcas");
+  if (budget) content.insertBefore(budget, marcas || null);
 }
 
+
+function sectionFromOriginal(selector) {
+  const source = document.createElement("div");
+  source.innerHTML = originalContent;
+  return source.querySelector(selector);
+}
+
+function ensureReportStructure() {
+  ensureBudgetSection();
+  const actions = content.querySelector("#acciones");
+  if (actions) {
+    if (!actions.querySelector("#executionSummaryRows")) {
+      const source = sectionFromOriginal("#executionSummaryRows")?.closest(".execution-summary-panel");
+      const crm = actions.querySelector(".crm-dashboard");
+      if (source) actions.insertBefore(source, crm || actions.firstElementChild?.nextSibling || null);
+    }
+    if (!actions.querySelector("#digitalPautaRows")) {
+      const source = sectionFromOriginal("#digitalPautaRows")?.closest(".digital-pauta-panel");
+      const evidence = actions.querySelector(".evidence-section-heading");
+      if (source) actions.insertBefore(source, evidence || null);
+    }
+  }
+  const resumen = content.querySelector("#resumen");
+  const acciones = content.querySelector("#acciones");
+  const presupuesto = content.querySelector("#presupuesto");
+  content.querySelector("#conclusiones")?.remove();
+  const marcas = content.querySelector("#marcas");
+  [resumen, acciones, presupuesto, marcas].filter(Boolean).forEach(section => content.appendChild(section));
+}
 function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
@@ -55,6 +84,23 @@ function normalizeLogoPaths(root = document) {
     else if (label.includes("desigual")) image.src = INLINE_LOGOS.desigualDark;
     else if (label.includes("wiseman")) image.src = darkCard ? INLINE_LOGOS.wisemanLight : INLINE_LOGOS.wisemanDark;
   });
+}
+
+function contentForExport() {
+  const clone = content.cloneNode(true);
+  clone.querySelectorAll("img").forEach(image => {
+    const label = (image.alt || "").toLowerCase();
+    const darkCard = Boolean(image.closest(".levis-card, .outlet-card, .wiseman-card"));
+    if (image.dataset.driveId) image.setAttribute("src", `https://drive.google.com/thumbnail?id=${image.dataset.driveId}&sz=w1600`);
+    else if (label.includes("ub cuarenta") || label.includes("comercializadora ub")) image.setAttribute("src", "assets/ub-cuarenta-light.png");
+    else if (label.includes("levi")) image.setAttribute("src", darkCard ? "assets/levis-light.png" : "assets/levis-color.png");
+    else if (label.includes("desigual")) image.setAttribute("src", "assets/desigual-dark.png");
+    else if (label.includes("wiseman")) image.setAttribute("src", darkCard ? "assets/wiseman-light.png" : "assets/wiseman-dark.png");
+    image.classList.remove("image-load-failed");
+    delete image.dataset.driveAttempt;
+  });
+  clone.querySelectorAll(".image-load-error").forEach(node => node.classList.remove("image-load-error"));
+  return clone.innerHTML;
 }
 
 function setEditing(state) {
@@ -98,7 +144,7 @@ function createReportPayload() {
   return {
     version: 6,
     updatedAt: new Date().toISOString(),
-    content: content.innerHTML,
+    content: contentForExport(),
     footer: footer.innerHTML,
     runtime: {
       storeData: window.reportStoreData || [],
@@ -119,7 +165,7 @@ function applyReportPayload(payload, label = "Último guardado") {
     footer.innerHTML = payload.footer || originalFooter;
   }
   actionFilters.brand = payload.runtime?.globalBrand || "all";
-  ensureBudgetSection();
+  ensureReportStructure();
   normalizeLogoPaths(content);
   ensureEditableWeek();
   window.ReportImporter?.restoreRuntimeData?.(payload.runtime || {});
@@ -182,6 +228,22 @@ function applyActionFilters() {
   });
   const crmBrandCount = document.querySelector("#crmBrandInsightCount");
   if (crmBrandCount) crmBrandCount.textContent = `${visibleCrmBrands} ${visibleCrmBrands === 1 ? "marca" : "marcas"}`;
+  let visibleExecutions = 0;
+  document.querySelectorAll(".execution-summary-card[data-brand]").forEach(card => {
+    const show = actionFilters.brand === "all" || card.dataset.brand === actionFilters.brand;
+    card.hidden = !show;
+    if (show) visibleExecutions += Number(card.querySelector(".execution-summary-head b")?.textContent.match(/\d+/)?.[0] || 1);
+  });
+  const executionCount = document.querySelector("#executionSummaryCount");
+  if (executionCount) executionCount.textContent = `${visibleExecutions} ${visibleExecutions === 1 ? "acción" : "acciones"}`;
+  let visibleDigital = 0;
+  document.querySelectorAll(".digital-pauta-card[data-brand]").forEach(card => {
+    const show = actionFilters.brand === "all" || card.dataset.brand === actionFilters.brand;
+    card.hidden = !show;
+    if (show) visibleDigital++;
+  });
+  const digitalCount = document.querySelector("#digitalPautaCount");
+  if (digitalCount) digitalCount.textContent = `${visibleDigital} ${visibleDigital === 1 ? "acción" : "acciones"}`;
   document.querySelectorAll(".sales-panel tbody tr[data-brand], .brand-analysis [data-brand], .store-insight-card[data-brand]").forEach(item => {
     item.hidden = actionFilters.brand !== "all" && item.dataset.brand !== actionFilters.brand;
   });
@@ -268,6 +330,27 @@ function hydrateGalleryControls(root = document) {
     }
   });
 }
+
+document.addEventListener("error", event => {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement) || !image.dataset.driveId) return;
+  const id = image.dataset.driveId;
+  const attempt = Number(image.dataset.driveAttempt || 0) + 1;
+  const alternatives = [
+    `https://lh3.googleusercontent.com/d/${id}=w1600`,
+    `https://drive.google.com/uc?export=view&id=${id}`
+  ];
+  if (attempt <= alternatives.length) {
+    image.dataset.driveAttempt = String(attempt);
+    image.src = alternatives[attempt - 1];
+    return;
+  }
+  image.classList.add("image-load-failed");
+  const card = image.closest(".evidence-card");
+  const brand = card?.dataset.brand;
+  image.src = brand === "desigual" ? "assets/ventas-privadas.png" : brand === "wiseman" ? "assets/wiseman-papa.png" : "assets/papa-con-estilo.png";
+  if (image.classList.contains("replaceable-image")) card?.classList.add("image-load-error");
+}, true);
 
 function exportReport() {
   const payload = localStorage.getItem(STORAGE_KEY) || JSON.stringify(createReportPayload());
@@ -467,6 +550,7 @@ async function initializeReport() {
   document.body.classList.toggle("publication-mode", isPublished);
   if (isPublished) editToggle.hidden = true;
   await restoreReport();
+  ensureReportStructure();
   normalizeLogoPaths();
   ensureEditableWeek();
   hydrateGalleryControls();
@@ -480,3 +564,9 @@ window.hydrateGalleryControls = hydrateGalleryControls;
 window.saveReport = saveReport;
 window.showToast = showToast;
 window.refreshEditingState = () => setEditing(editing);
+
+
+
+
+
+

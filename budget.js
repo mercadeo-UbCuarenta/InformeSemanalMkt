@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   const state={filters:{from:"",to:"",brand:"all",store:"all",provider:"all",documentType:"all"}};
   const normalize=value=>String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase();
   const escapeHtml=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
@@ -23,3 +23,4 @@
   document.addEventListener("click",event=>{if(!event.target.closest("#budgetClearFilters"))return;state.filters=blankFilters();["budgetDateFrom","budgetDateTo"].forEach(id=>{const node=document.querySelector(`#${id}`);if(node)node.value="";});["budgetBrand","budgetStore","budgetProvider","budgetDocumentType"].forEach(id=>{const node=document.querySelector(`#${id}`);if(node)node.value="all";});render();});
   window.BudgetModule={importBudget,applySheet,restoreData,render};restoreData([]);
 })();
+

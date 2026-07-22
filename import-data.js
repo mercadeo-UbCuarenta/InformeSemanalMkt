@@ -1,8 +1,8 @@
-(() => {
+﻿(() => {
   const textDecoder = new TextDecoder("utf-8");
   const brandLabels = {
-    levis:"Levi’s Línea",
-    "levis-outlet":"Levi’s Outlet",
+    levis:"Levi's Línea",
+    "levis-outlet":"Levi's Outlet",
     desigual:"Desigual",
     wiseman:"Wiseman",
     digital:"Digital"
@@ -10,7 +10,7 @@
 
   const normalize = value => String(value ?? "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    .toLowerCase().replace(/['']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
   const xml = source => new DOMParser().parseFromString(source, "application/xml");
   const elements = (node, localName) => Array.from(node.getElementsByTagName("*")).filter(item => item.localName === localName);
@@ -26,15 +26,15 @@
     const parsed = Number(clean);
     return Number.isFinite(parsed) ? parsed : 0;
   };
-  const displayNumber = value => typeof value === "number" ? value.toLocaleString("es-CO") : String(value ?? "—");
+  const displayNumber = value => typeof value === "number" ? value.toLocaleString("es-CO") : String(value ?? "-");
   const displayMoney = value => {
-    if (typeof value !== "number") return String(value ?? "—");
+    if (typeof value !== "number") return String(value ?? "-");
     if (Math.abs(value) >= 1000000) return `$${(value / 1000000).toLocaleString("es-CO", {maximumFractionDigits:1})}M`;
     return value.toLocaleString("es-CO", {style:"currency", currency:"COP", maximumFractionDigits:0});
   };
   const displayPercent = value => {
     if (typeof value !== "number") {
-      const text = String(value ?? "—");
+      const text = String(value ?? "-");
       return text.includes("%") ? text : text;
     }
     const percentage = Math.abs(value) <= 10 ? value * 100 : value;
@@ -65,7 +65,7 @@
       const date = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
       return date.toLocaleDateString("es-CO", {day:"2-digit", month:"short", year:"numeric", timeZone:"UTC"});
     }
-    return String(value ?? "—");
+    return String(value ?? "-");
   };
   const parseCurrency = value => {
     if (typeof value === "number") return value;
@@ -289,7 +289,7 @@
       if (!card) return;
       card.classList.toggle("channel-empty", !channelRows.length);
       if (!channelRows.length) {
-        card.querySelectorAll("[data-metric]").forEach(metric => metric.textContent = "—");
+        card.querySelectorAll("[data-metric]").forEach(metric => metric.textContent = "-");
         return;
       }
       const hasMetrics = channelRows.some(row => ["enviados", "entregados", "apertura", "ctr", "leidos", "respuestas", "conversiones", "bajas"]
@@ -555,6 +555,15 @@
       if (count) count.textContent = "Sin información";
       return;
     }
+    const dailyStores = window.reportTrafficStores || [];
+    const exteriorByBrand = dailyStores.reduce((map, item) => {
+      const brand = item.brand || "otros";
+      if (!map.has(brand)) map.set(brand, {exterior:0, individual:0});
+      const current = map.get(brand);
+      current.exterior += number(item.exterior);
+      current.individual += number(item.individual);
+      return map;
+    }, new Map());
     const groups = Array.from(source.reduce((map, item) => {
       if (!map.has(item.brand)) map.set(item.brand, []);
       map.get(item.brand).push(item);
@@ -565,32 +574,40 @@
       const previousSales = stores.reduce((sum, item) => sum + number(item.salesPrev), 0);
       const totalTraffic = stores.reduce((sum, item) => sum + number(item.trafficNow), 0);
       const previousTraffic = stores.reduce((sum, item) => sum + number(item.trafficPrev), 0);
+      const exterior = exteriorByBrand.get(brand)?.exterior || 0;
+      const individual = exteriorByBrand.get(brand)?.individual || totalTraffic;
+      const capture = exterior ? individual / exterior : 0;
       const best = stores.slice().sort((a, b) => number(b.salesVar) - number(a.salesVar))[0];
       const validCompliance = stores.filter(item => item.salesCompliance !== "" && item.salesCompliance !== undefined && number(item.salesCompliance) > 0);
       const opportunity = validCompliance.sort((a, b) => number(a.salesCompliance) - number(b.salesCompliance))[0];
       const salesVariation = previousSales ? totalSales / previousSales - 1 : 0;
       const trafficVariation = previousTraffic ? totalTraffic / previousTraffic - 1 : 0;
-      return `<article class="store-insight-card" data-brand="${brand}">
+      return `<article class="store-insight-card commercial-brand-card" data-brand="${brand}">
         <div class="store-insight-head"><span>${escapeHtml(brandLabels[brand] || brand)}</span><b>${stores.length} ${stores.length === 1 ? "tienda" : "tiendas"}</b></div>
-        <div class="store-insight-main"><strong>${displayMoney(totalSales)}</strong><span>Venta semanal</span></div>
-        <div class="store-insight-metrics">
-          <div><span>Var. ventas</span><b class="${salesVariation >= 0 ? "positive" : "negative"}">${displayPercent(salesVariation)}</b></div>
-          <div><span>Tráfico</span><b>${displayNumber(totalTraffic)}</b><small>${displayPercent(trafficVariation)} vs. PY</small></div>
+        <div class="commercial-brand-main"><strong>${displayMoney(totalSales)}</strong><span>Venta 2026</span></div>
+        <div class="commercial-brand-metrics">
+          <div><span>Venta PY</span><b>${displayMoney(previousSales)}</b></div>
+          <div><span>Variación</span><b class="${salesVariation >= 0 ? "positive" : "negative"}">${displayPercent(salesVariation)}</b></div>
+          <div><span>Tráfico 2026</span><b>${displayNumber(totalTraffic)}</b></div>
+          <div><span>Tráfico PY</span><b>${displayNumber(previousTraffic)}</b><small>${displayPercent(trafficVariation)} vs. PY</small></div>
+          <div><span>Tráfico exterior 2026</span><b>${exterior ? displayNumber(exterior) : "Sin dato"}</b></div>
+          <div><span>Tráfico interior</span><b>${displayNumber(individual)}</b></div>
+          <div><span>Tasa de captura</span><b>${exterior ? displayPercent(capture) : "Sin dato"}</b></div>
+          <div><span>Lectura tienda</span><b>${escapeHtml(best?.store || "Sin dato")}</b><small>Mejor tienda</small></div>
         </div>
-        <div class="store-insight-notes"><p><span>Mejor evolución</span><strong>${escapeHtml(best?.store || "—")}</strong></p><p><span>Mayor oportunidad</span><strong>${escapeHtml(opportunity?.store || "—")}</strong></p></div>
+        <div class="store-insight-notes"><p><span>Tienda con oportunidad</span><strong>${escapeHtml(opportunity?.store || "Sin dato")}</strong></p></div>
       </article>`;
     }).join("");
     const count = document.querySelector("#storeDetailCount");
     if (count) count.textContent = `${source.length} tiendas · ${groups.length} marcas`;
   }
-
   function applyBrandSummaryFilter(brand = "all") {
     const source = window.reportStoreData || [];
     if (!source.length) return;
     const rows = brand === "all" ? source : source.filter(item => item.brand === brand);
     if (!rows.length) {
       ["ventas-semana", "variacion-semana", "cumplimiento-meta", "meta-semana", "trafico-semana", "cumplimiento-trafico", "ticket-compania"]
-        .forEach(field => setText(`[data-field="${field}"]`, "—"));
+        .forEach(field => setText(`[data-field="${field}"]`, "-"));
       return;
     }
     const sum = field => rows.reduce((total, item) => total + number(item[field]), 0);
@@ -608,9 +625,9 @@
     setText('[data-field="variacion-semana"]', `${variation > 0 ? "+" : ""}${displayPercent(variation)}`);
     setText('[data-field="variacion-compania"]', `${variation > 0 ? "+" : ""}${displayPercent(variation)}`);
     setText('[data-field="meta-semana"]', displayMoney(salesGoal));
-    setText('[data-field="cumplimiento-meta"]', salesGoal ? displayPercent(salesNow / salesGoal) : "—");
+    setText('[data-field="cumplimiento-meta"]', salesGoal ? displayPercent(salesNow / salesGoal) : "-");
     setText('[data-field="trafico-semana"]', displayNumber(trafficNow));
-    setText('[data-field="cumplimiento-trafico"]', trafficGoal ? displayPercent(trafficNow / trafficGoal) : "—");
+    setText('[data-field="cumplimiento-trafico"]', trafficGoal ? displayPercent(trafficNow / trafficGoal) : "-");
     setText('[data-field="ticket-compania"]', displayMoney(ticket));
   }
 
@@ -655,6 +672,7 @@
       select.value = window.selectedTrafficStore;
     }
     renderDailyTraffic();
+    renderStorePerformance();
     return window.reportDailyTraffic.length;
   }
 
@@ -677,16 +695,16 @@
     tbody.innerHTML = stores.map(item => `<tr class="traffic-rank-row${item.key === window.selectedTrafficStore ? " selected" : ""}" data-traffic-store="${escapeHtml(item.key)}" data-brand="${escapeHtml(item.brand)}">
       <td class="store-cell"><strong>${escapeHtml(item.store)}</strong><small>${escapeHtml(brandLabels[item.brand] || item.brand || "Sin clasificar")}</small></td>
       <td>${item.days.length}</td><td>${displayNumber(item.exterior)}</td><td>${displayNumber(item.individual)}</td>
-      <td>${displayPercent(item.conversion)}</td><td>${escapeHtml(item.best?.date || "—")}</td>
+      <td>${displayPercent(item.conversion)}</td><td>${escapeHtml(item.best?.date || "-")}</td>
     </tr>`).join("") || '<tr><td colspan="6" class="empty-table">Sin datos de tráfico.</td></tr>';
     const count = document.querySelector("#dailyTrafficCount");
     if (count) count.textContent = `${stores.length} puntos de venta`;
     const selected = stores.find(item => item.key === window.selectedTrafficStore) || stores[0];
     if (!selected) {
-      setText("#trafficExteriorTotal", "—");
-      setText("#trafficIndividualTotal", "—");
-      setText("#trafficConversionAvg", "—");
-      setText("#trafficBestDay", "—");
+      setText("#trafficExteriorTotal", "-");
+      setText("#trafficIndividualTotal", "-");
+      setText("#trafficConversionAvg", "-");
+      setText("#trafficBestDay", "-");
       const chart = document.querySelector("#trafficDailyChart");
       if (chart) chart.innerHTML = '<p class="empty-table">No hay tiendas para esta marca.</p>';
       return;
@@ -695,7 +713,7 @@
     setText("#trafficExteriorTotal", displayNumber(selected.exterior));
     setText("#trafficIndividualTotal", displayNumber(selected.individual));
     setText("#trafficConversionAvg", displayPercent(selected.conversion));
-    setText("#trafficBestDay", selected.best?.date || "—");
+    setText("#trafficBestDay", selected.best?.date || "-");
     const maxExterior = Math.max(...selected.days.map(day => number(day.exterior)), 1);
     const chart = document.querySelector("#trafficDailyChart");
     if (chart) {
@@ -724,13 +742,15 @@
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
   const defaultImage = brand => brand === "desigual" ? "assets/ventas-privadas.png" : brand === "wiseman" ? "assets/wiseman-papa.png" : "assets/papa-con-estilo.png";
+  const driveImageId = value => String(value ?? "").match(/\/file\/d\/([a-zA-Z0-9_-]+)/)?.[1]
+    || String(value ?? "").match(/[?&]id=([a-zA-Z0-9_-]+)/)?.[1]
+    || String(value ?? "").match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1]
+    || "";
   const driveImageUrl = value => {
     const url = String(value ?? "").trim();
     if (!url || normalize(url).includes("pegar enlace publico")) return "";
-    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)
-      || url.match(/[?&]id=([a-zA-Z0-9_-]+)/)
-      || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (match?.[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1600`;
+    const id = driveImageId(url);
+    if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
     return /^https?:\/\//i.test(url) ? url : "";
   };
   const actionKey = (brand, campaign) => `${brandKey(brand)}|${normalize(campaign)}`;
@@ -797,6 +817,64 @@
     "vitrinas":"Vitrinas", "eventos":"Eventos", "otros":"Otros"
   };
 
+
+  function executionGroup(row) {
+    const text = [pick(row, "tipo", "canal"), pick(row, "canales", "canal"), pick(row, "titulo", "título", "campana", "campaña"), pick(row, "descripcion", "descripción")].join(" ");
+    const key = normalize(text);
+    if (key.includes("email") || key.includes("sms") || key.includes("whatsapp") || key.includes("crm") || key.includes("mail")) return "CRM";
+    if (key.includes("pauta") || key.includes("meta") || key.includes("paid") || key.includes("ads") || key.includes("instagram") || key.includes("facebook") || key.includes("tiktok") || key.includes("redes") || key.includes("social")) return "Marketing Digital";
+    if (key.includes("btl") || key.includes("punto de venta") || key.includes("pop") || key.includes("cenefa") || key.includes("vitrina")) return "BTL";
+    if (key.includes("atl") || key.includes("valla") || key.includes("radio") || key.includes("prensa") || key.includes("television") || key.includes("televisión")) return "ATL";
+    if (key.includes("activacion") || key.includes("activación") || key.includes("evento") || key.includes("lanzamiento") || key.includes("experiencia")) return "Activaciones de Marca";
+    return "Otros";
+  }
+
+  function renderExecutionSummary(data) {
+    const container = document.querySelector("#executionSummaryRows");
+    if (!container) return;
+    const brands = ["levis", "levis-outlet", "desigual", "wiseman", "digital"].filter(brand =>
+      data.some(row => brandKey(pick(row, "marca")) === brand)
+    );
+    container.innerHTML = brands.map(brand => {
+      const rows = data.filter(row => brandKey(pick(row, "marca")) === brand);
+      const groups = Array.from(rows.reduce((map, row) => {
+        const group = executionGroup(row);
+        if (!map.has(group)) map.set(group, []);
+        map.get(group).push(row);
+        return map;
+      }, new Map())).sort((a, b) => b[1].length - a[1].length);
+      const campaigns = rows.map(row => pick(row, "titulo", "título", "campana", "campaña")).filter(Boolean);
+      return `<article class="execution-summary-card" data-brand="${brand}">
+        <div class="execution-summary-head"><span>${escapeHtml(brandLabels[brand] || brand)}</span><b>${rows.length} ${rows.length === 1 ? "acción" : "acciones"}</b></div>
+        <div class="execution-category-list">${groups.map(([name, items]) => `<span>${escapeHtml(name)} <b>${items.length}</b></span>`).join("")}</div>
+        <p>${escapeHtml(campaigns.slice(0, 2).join(" · ") || "Sin campañas destacadas")}</p>
+      </article>`;
+    }).join("") || '<article class="crm-campaign-empty">Sin acciones por marca.</article>';
+    const count = document.querySelector("#executionSummaryCount");
+    if (count) count.textContent = `${data.length} ${data.length === 1 ? "acción" : "acciones"}`;
+  }
+
+  function renderDigitalPauta(data) {
+    const container = document.querySelector("#digitalPautaRows");
+    if (!container) return;
+    const digitalRows = data.filter(row => {
+      const text = [pick(row, "tipo", "canal"), pick(row, "canales", "canal"), pick(row, "titulo", "título", "campana", "campaña"), pick(row, "descripcion", "descripción")].join(" ");
+      const key = normalize(text);
+      return key.includes("pauta") || key.includes("digital") || key.includes("ads") || key.includes("meta") || key.includes("redes") || key.includes("instagram") || key.includes("facebook") || key.includes("tiktok") || key.includes("social");
+    });
+    container.innerHTML = digitalRows.map(row => {
+      const brand = brandKey(pick(row, "marca"));
+      const channels = String(pick(row, "canales", "canal") || "").split(/[,;+]/).map(item => item.trim()).filter(Boolean);
+      return `<article class="digital-pauta-card" data-brand="${brand}">
+        <div class="crm-campaign-top"><span>${escapeHtml(brandLabels[brand] || pick(row, "marca") || "Sin marca")}</span><b>${escapeHtml(pick(row, "tipo", "canal") || "Digital")}</b></div>
+        <h4>${escapeHtml(pick(row, "titulo", "título", "campana", "campaña") || "Acción digital")}</h4>
+        <p>${escapeHtml(pick(row, "descripcion", "descripción") || "Acción importada desde el Excel semanal.")}</p>
+        <div class="channel-list">${channels.map(channel => `<span>${escapeHtml(channel)}</span>`).join("")}</div>
+      </article>`;
+    }).join("") || '<article class="crm-campaign-empty">Sin pauta digital reportada para la semana.</article>';
+    const count = document.querySelector("#digitalPautaCount");
+    if (count) count.textContent = `${digitalRows.length} ${digitalRows.length === 1 ? "acción" : "acciones"}`;
+  }
   function actionCard(row, linkedEvidence = []) {
     const brand = brandKey(pick(row, "marca")) || "levis";
     const title = pick(row, "titulo", "título", "campana", "campaña") || "Acción de marketing";
@@ -813,17 +891,21 @@
     const linkedImages = linkedEvidence.map(item => item.source);
     const images = linkedImages.length ? linkedImages : row.__images?.length ? row.__images : [row.__image || defaultImage(brand)];
     const image = images[0];
+    const imageTag = (source, alt, className = "") => {
+      const id = driveImageId(source);
+      return `<img${className ? ` class="${className}"` : ""} src="${escapeHtml(source)}" alt="${escapeHtml(alt)}"${id ? ` data-drive-id="${id}" data-drive-attempt="0"` : ""} loading="lazy" decoding="async">`;
+    };
     const results = ["resultado 1", "resultado 2", "resultado 3"].map(name => pick(row, name)).filter(Boolean);
     return `<article class="evidence-card" data-brand="${brand}" data-type="${categories.join(" ")}">
       <div class="evidence-image">
-        <img class="replaceable-image" src="${image}" alt="${escapeHtml(title)}">
+        ${imageTag(image, title, "replaceable-image")}
         <span class="image-edit-hint">Cambiar imagen</span>
         <div class="card-brand editable" contenteditable="false">${brandLabels[brand] || escapeHtml(pick(row, "marca"))}</div>
         <div class="card-action-type editable" contenteditable="false">${escapeHtml(categoryText)}</div>
       </div>
       <div class="evidence-gallery">
-        ${images.map((source, index) => `<button class="gallery-thumb${index === 0 ? " active" : ""}" type="button"><img src="${source}" alt="${escapeHtml(title)} ${index + 1}"><span class="remove-gallery-image" aria-label="Eliminar foto">×</span></button>`).join("")}
-        <button class="add-gallery-images" type="button">＋ Fotos</button>
+        ${images.map((source, index) => `<button class="gallery-thumb${index === 0 ? " active" : ""}" type="button">${imageTag(source, `${title} ${index + 1}`)}<span class="remove-gallery-image" aria-label="Eliminar foto">×</span></button>`).join("")}
+        <button class="add-gallery-images" type="button">+ Fotos</button>
       </div>
       <div class="evidence-body">
         <div class="evidence-meta"><span>${escapeHtml(type)}</span><time class="editable" contenteditable="false">${escapeHtml(date)}</time></div>
@@ -842,6 +924,8 @@
     const data = rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).map(row => rowObject(headers, row));
     if (!data.length) return 0;
     const links = evidenceMap(evidenceRows);
+    renderExecutionSummary(data);
+    renderDigitalPauta(data);
     const grid = document.querySelector("#evidenceGrid");
     grid.innerHTML = data.map(row => actionCard(row, evidenceForAction(links, pick(row, "marca"), pick(row, "titulo", "título", "campana", "campaña")))).join("");
     window.hydrateGalleryControls?.(grid);
@@ -851,7 +935,7 @@
   }
 
   async function importExcel(file) {
-    status(`Leyendo ${file.name}…`);
+    status(`Leyendo ${file.name}...`);
     const files = await unzip(await file.arrayBuffer());
     const workbook = parseWorkbook(files);
     const salesSheet = sheetByName(workbook, "Ventas");
@@ -910,9 +994,9 @@
 
   function pptTitle(items, text, type) {
     const known = [
-      /PAP[ÁA] CON ESTILO/i, /LANZAMIENTO LEVI[’']?S COLINA/i,
-      /REBAJAS\s*[-–—]\s*VENTAS PRIVADAS/i, /VENTAS PRIVADAS/i,
-      /EL PAP[ÁA] TITULAR(?:\s*[-–—]?\s*40%\s*OFF)?/i,
+      /PAP[ÁA] CON ESTILO/i, /LANZAMIENTO LEVI['']?S COLINA/i,
+      /REBAJAS\s*[---]\s*VENTAS PRIVADAS/i, /VENTAS PRIVADAS/i,
+      /EL PAP[ÁA] TITULAR(?:\s*[---]?\s*40%\s*OFF)?/i,
       /TODO\s+50%,?\s*40%\s*Y\s*30%/i, /TODA LA TIENDA\s*30%\s*OFF/i
     ];
     for (const pattern of known) {
@@ -933,7 +1017,7 @@
   }
 
   async function importPowerPoint(file) {
-    status(`Leyendo ${file.name} y extrayendo evidencias…`);
+    status(`Leyendo ${file.name} y extrayendo evidencias...`);
     const files = await unzip(await file.arrayBuffer());
     const slidePaths = Array.from(files.keys()).filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
       .sort((a, b) => number(a.match(/\d+/)?.[0]) - number(b.match(/\d+/)?.[0]));
@@ -1056,3 +1140,8 @@
   };
   window.applyBrandSummaryFilter = applyBrandSummaryFilter;
 })();
+
+
+
+
+
