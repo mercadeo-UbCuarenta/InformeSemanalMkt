@@ -148,6 +148,7 @@ body{background:#090909;color:#f5f5f2}.topbar{background:rgba(8,8,8,.94);border-
 .conclusions{background:#0a0a0a}.decision-grid{background:#333330}.decision-grid article{background:#151515;color:#fff}.decision-grid p{color:#a5a59f}.decision-grid article>span{color:var(--active-brand)}.closing-note{background:#f0efea;color:#111}.closing-note span{color:#666}footer{background:#050505;color:#999;border-top:1px solid #292927}
 [data-brand="levis"]{--brand-accent:#d31335}[data-brand="levis-outlet"]{--brand-accent:#8d1730}[data-brand="desigual"]{--brand-accent:#f2eee5}[data-brand="wiseman"]{--brand-accent:#39d6cf}[data-brand="digital"]{--brand-accent:#5aa8ff}
 .sales-panel tr[data-brand] td:first-child{position:relative;padding-left:25px}.sales-panel tr[data-brand] td:first-child:before{content:"";position:absolute;left:8px;top:50%;width:5px;height:26px;transform:translateY(-50%);background:var(--brand-accent)}
+.sales-unit-row{cursor:pointer}.sales-unit-row:hover{background:#20201e}.sales-unit-row:focus{outline:2px solid var(--active-brand);outline-offset:-2px}.sales-unit-row[aria-expanded="true"]{background:#1d1d1b}.sales-unit-toggle{width:100%;display:flex;align-items:center;gap:9px;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;text-align:left;cursor:pointer;padding:0}.sales-unit-toggle:before{content:"+";display:inline-grid;place-items:center;width:20px;height:20px;border:1px solid #444;border-radius:50%;font-size:12px;color:var(--active-brand)}.sales-unit-row[aria-expanded="true"] .sales-unit-toggle:before{content:"-"}.sales-unit-detail-row[hidden]{display:none!important}.sales-unit-detail-cell{padding:0 12px 18px 25px!important;text-align:left!important;background:#0d0d0d}.sales-unit-detail{border:1px solid #333330;background:#151515;padding:16px;overflow:auto}.sales-unit-detail table{min-width:980px}.sales-unit-detail th,.sales-unit-detail td{font-size:10px}.sales-unit-detail td:first-child,.sales-unit-detail th:first-child{text-align:left}.sales-unit-empty{margin:0;color:#999;font-size:12px}
 @media(max-width:900px){
   .topbar{padding:0 20px}.topbar nav{display:none}.company{width:155px}
   .global-filter-inner{width:calc(100% - 32px);gap:12px}.global-filter-inner>span{display:none}
@@ -168,6 +169,7 @@ body{background:#090909;color:#f5f5f2}.topbar{background:rgba(8,8,8,.94);border-
   .actions-heading{align-items:flex-start}.action-filter-panel{padding:14px}.filters{width:100%;overflow:auto}.panel{padding:20px}.editor-panel{width:calc(100% - 24px);right:12px;bottom:12px}.closing-note{padding:25px}.closing-note p{font-size:18px}.photo-viewer{padding:18px}.photo-viewer-caption{flex-direction:column;gap:5px}.photo-viewer-close{right:14px;top:14px}
   footer{flex-wrap:wrap;height:auto;padding:35px 20px}footer p{width:100%;order:3}
 }
+@media(max-width:600px){.sales-unit-detail{padding:10px}.sales-unit-detail table{min-width:760px}.sales-unit-detail-cell{padding-left:12px!important}}
 @media print{
   .topbar,.global-brand-filter,.editor-panel,.add-evidence,.delete-card,.scroll-hint,.action-filter-panel,.toast,.photo-viewer{display:none!important}
   body{background:white}.hero{height:720px;page-break-after:always}.section{padding:60px 0}.brands-section{print-color-adjust:exact;-webkit-print-color-adjust:exact}.evidence-card{break-inside:avoid}.evidence-grid{grid-template-columns:1fr 1fr}.conclusions{print-color-adjust:exact;-webkit-print-color-adjust:exact}
@@ -191,10 +193,10 @@ body{background:#090909;color:#f5f5f2}.topbar{background:rgba(8,8,8,.94);border-
 .execution-category-list span{border:1px solid #42423f;color:#ddd;padding:6px 7px;border-radius:3px;font-size:9px}
 .execution-category-list b{color:var(--active-brand);margin-left:4px}
 .execution-summary-card p{margin:0;color:#aaa;font-size:11px;line-height:1.5}
-.digital-pauta-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.digital-pauta-card{background:#181818;border:1px solid #363633;border-top:4px solid var(--brand-accent);padding:18px;min-height:210px}
-.digital-pauta-card h4{font-family:"Manrope";font-size:18px;margin:16px 0 8px;line-height:1.2}
-.digital-pauta-card p{color:#aaa;font-size:11px;line-height:1.5;margin:0 0 14px}
+.digital-pauta-dashboard{display:grid;gap:12px}.digital-pauta-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#343431;border:1px solid #343431}.digital-pauta-kpis article{background:#171716;padding:20px;min-height:150px}.digital-pauta-kpis span{display:block;color:#94948e;font-size:8px;text-transform:uppercase;font-weight:800;letter-spacing:.08em}.digital-pauta-kpis strong{display:block;font-family:"Manrope";font-size:clamp(24px,2.6vw,38px);line-height:1;margin:18px 0 10px}.digital-pauta-kpis small{color:#858580;font-size:9px}.digital-pauta-split{display:grid;grid-template-columns:.8fr 1.2fr;gap:10px}.digital-pauta-summary{background:#171716;border:1px solid #343431;padding:22px}.digital-pauta-summary h4{font-family:"Manrope";font-size:20px;margin:0 0 18px}.digital-pauta-bars{display:grid;gap:16px}.digital-pauta-bar>div{display:flex;justify-content:space-between;gap:18px;font-size:11px}.digital-pauta-bar i{display:block;height:5px;background:#30302e;margin:8px 0 6px}.digital-pauta-bar em{display:block;height:100%;background:var(--brand-accent,var(--active-brand))}.digital-pauta-bar small{color:#858580;font-size:8px}.digital-pauta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.digital-pauta-card{background:#181818;border:1px solid #363633;border-top:4px solid var(--brand-accent);padding:18px;min-height:250px;display:flex;flex-direction:column}
+.digital-pauta-card h4{font-family:"Manrope";font-size:18px;margin:16px 0 8px;line-height:1.2;overflow-wrap:anywhere}
+.digital-pauta-card p{color:#aaa;font-size:11px;line-height:1.5;margin:0 0 14px}.digital-pauta-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid #363633;border-left:1px solid #363633;margin-top:auto}.digital-pauta-metrics div{padding:10px;border-right:1px solid #363633;border-bottom:1px solid #363633;background:#151515}.digital-pauta-metrics span{display:block;color:#8f8f8a;font-size:7px;text-transform:uppercase;letter-spacing:.06em}.digital-pauta-metrics b{display:block;font-family:"Manrope";font-size:14px;margin-top:5px;overflow-wrap:anywhere}.digital-pauta-card-foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}.digital-pauta-card-foot span{border:1px solid #42423f;color:#ddd;padding:6px 7px;border-radius:3px;font-size:8px}.digital-pauta-status{background:#143128;color:#52d69c!important;border-color:#226448!important}
 .commercial-brand-card{padding:22px;background:#151515}
 .commercial-brand-main{padding:20px 0 16px}
 .commercial-brand-main strong{display:block;font-family:"Manrope";font-size:30px;line-height:1.05}
@@ -204,6 +206,62 @@ body{background:#090909;color:#f5f5f2}.topbar{background:rgba(8,8,8,.94);border-
 .commercial-brand-metrics span,.commercial-brand-metrics small{display:block;color:#8f8f8a;font-size:7px;text-transform:uppercase;letter-spacing:.06em}
 .commercial-brand-metrics b{display:block;font-family:"Manrope";font-size:16px;margin-top:5px;overflow-wrap:anywhere}
 .commercial-brand-metrics small{margin-top:4px;text-transform:none;letter-spacing:0}
-@media(max-width:900px){.execution-summary-grid,.digital-pauta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.execution-summary-panel,.digital-pauta-panel{padding:20px}.execution-summary-grid,.digital-pauta-grid{grid-template-columns:1fr}.commercial-brand-metrics{grid-template-columns:1fr}}
+@media(max-width:900px){.execution-summary-grid,.digital-pauta-grid,.digital-pauta-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.digital-pauta-split{grid-template-columns:1fr}}
+@media(max-width:600px){.execution-summary-panel,.digital-pauta-panel{padding:20px}.execution-summary-grid,.digital-pauta-grid,.digital-pauta-kpis{grid-template-columns:1fr}.digital-pauta-metrics{grid-template-columns:1fr 1fr}.commercial-brand-metrics{grid-template-columns:1fr}}
 @media print{.execution-summary-panel,.digital-pauta-panel{break-inside:avoid}.execution-summary-grid,.digital-pauta-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* Infographic PDF export */
+@page{size:A4 portrait;margin:9mm}
+@media print{
+  *{box-shadow:none!important;text-shadow:none!important;animation:none!important;transition:none!important}
+  html{background:#fff!important}
+  body{background:#fff!important;color:#151515!important;font-size:9.5pt;line-height:1.35;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .topbar,.global-brand-filter,.editor-panel,.add-evidence,.delete-card,.scroll-hint,.action-filter-panel,.traffic-dashboard-controls,.budget-filter-panel,.toast,.photo-viewer,.hero-image-edit-hint,.gallery-add,.change-image,.clear-image{display:none!important}
+  .shell{width:100%!important;max-width:none!important}
+  .hero{height:auto!important;min-height:0!important;padding:17mm 0 12mm!important;background:#080808!important;color:#f8f7f2!important;break-after:page;page-break-after:always}
+  .hero-grid{display:grid!important;grid-template-columns:1.05fr .95fr!important;gap:8mm!important;align-items:stretch!important;width:100%!important;margin:0!important}
+  .hero h1{font-size:54pt!important;line-height:.86!important;margin:0 0 9mm!important;letter-spacing:0!important}
+  .hero h1 span{-webkit-text-stroke:1pt #f8f7f2!important}
+  .hero-period{font-size:13pt!important;margin-bottom:5mm!important;color:#d8d8d2!important}
+  .hero-meta{flex-wrap:wrap!important}.hero-meta span{font-size:7.5pt!important;padding:2.5mm 3mm!important;border-color:#555!important}
+  .hero-visual{height:96mm!important;min-height:0!important;border:1px solid #292927!important;border-radius:2mm!important;padding:7mm!important;background:linear-gradient(180deg,transparent 44%,rgba(0,0,0,.7)),url("assets/hero-fashion-editorial.png") center/cover no-repeat!important}
+  .hero-stat{width:55mm!important;min-height:37mm!important;height:auto!important;border-radius:1mm!important;padding:5mm!important;background:rgba(10,10,10,.93)!important;color:#fff!important}
+  .hero-stat strong{font-size:30pt!important}.hero-stat-label,.hero-stat>span:last-child{font-size:6.5pt!important}
+  .brand-stack{right:6mm!important;bottom:6mm!important;width:41mm!important;padding:4mm!important;gap:3mm!important;border-radius:1mm!important;background:#fff!important}.brand-stack img{max-width:31mm!important;max-height:7mm!important}
+  .section{padding:9mm 0!important;background:#fff!important;color:#151515!important;break-before:page;page-break-before:always}
+  #resumen{break-before:auto;page-break-before:auto}
+  .section-heading,.budget-heading,.evidence-section-heading{display:grid!important;grid-template-columns:1.1fr .9fr!important;gap:6mm!important;align-items:end!important;margin:0 0 6mm!important;padding-top:3mm!important;border-top:1pt solid #151515!important;color:#151515!important}
+  .section-heading h2,.budget-heading h2,.evidence-section-heading h3{font-size:25pt!important;line-height:.95!important;margin:0!important;letter-spacing:0!important;color:#151515!important}
+  .section-intro,.evidence-section-heading p,.store-insights-intro{font-size:8.5pt!important;line-height:1.45!important;color:#5d5d59!important;margin:0!important;width:auto!important;max-width:none!important}
+  .eyebrow,.evidence-section-heading span{font-size:6.5pt!important;color:#c8102e!important}
+  .kpi-grid,.crm-channel-grid,.crm-brand-insights,.execution-summary-grid,.store-insights-grid,.budget-kpis{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:1.5mm!important;background:transparent!important;border:0!important;margin-bottom:4mm!important}
+  .budget-analysis-grid,.brand-analysis,.digital-pauta-grid,.evidence-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:2mm!important}
+  .kpi-card,.kpi-dark,.panel,.commercial-detail,.daily-traffic-panel,.store-insight-card,.crm-dashboard,.crm-intro,.crm-channel,.crm-brand-insights-section,.crm-brand-insight,.crm-campaign-detail,.crm-campaign-card,.execution-summary-panel,.execution-summary-card,.digital-pauta-panel,.digital-pauta-card,.evidence-card,.budget-kpis article,.budget-breakdown,.budget-detail,.brand-analysis-card{break-inside:avoid;page-break-inside:avoid;border-radius:1mm!important;border:1px solid #dad7d0!important;background:#f7f6f2!important;color:#151515!important}
+  .kpi-card,.kpi-dark,.store-insight-card,.crm-channel,.crm-brand-insight,.execution-summary-card,.digital-pauta-card,.budget-kpis article{min-height:0!important;padding:4mm!important}
+  .kpi-card strong,.kpi-dark strong,.commercial-brand-main strong,.crm-primary strong,.crm-brand-insight-main strong,.budget-kpis strong{font-size:18pt!important;line-height:1!important;color:#151515!important;margin:3mm 0!important}
+  .kpi-card>span,.kpi-card small,.kpi-dark>span,.kpi-dark small,.crm-channel-head small,.crm-primary>span,.crm-metrics span,.commercial-brand-metrics span,.commercial-brand-metrics small,.store-insight-metrics span,.store-insight-metrics small,.budget-kpis span,.budget-kpis small{font-size:6.2pt!important;color:#686864!important}
+  .kpi-icon,.channel-icon{width:8mm!important;height:8mm!important;background:#151515!important;color:#fff!important}
+  .panel,.commercial-detail,.daily-traffic-panel,.execution-summary-panel,.digital-pauta-panel,.crm-dashboard,.budget-detail{padding:5mm!important;margin-bottom:4mm!important}
+  .performance-grid,.brand-focus-grid{display:grid!important;grid-template-columns:1fr!important;gap:4mm!important}
+  .commercial-brand-metrics,.store-insight-metrics,.crm-metrics,.crm-campaign-kpis{display:grid!important;grid-template-columns:repeat(2,1fr)!important;border-color:#dedbd5!important}
+  .commercial-brand-metrics div,.store-insight-metrics div,.crm-metrics div,.crm-campaign-kpis div{min-height:0!important;padding:2.5mm!important;background:#fff!important;border-color:#dedbd5!important;color:#151515!important}
+  .detail-controls,.filters,.filter-group{display:none!important}
+  .sales-unit-row{break-inside:avoid;page-break-inside:avoid}.sales-unit-row[aria-expanded="false"]+.sales-unit-detail-row{display:none!important}.sales-unit-detail-cell{padding:0 0 4mm!important;background:#fff!important}.sales-unit-detail{border:1px solid #dedbd5!important;background:#fff!important;padding:3mm!important}.sales-unit-detail table{min-width:0!important}
+  .detail-table-wrap,.table-wrap{max-height:none!important;overflow:visible!important;padding:0!important}
+  table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:auto!important}
+  th,td{font-size:6.4pt!important;padding:2mm 1.3mm!important;border-color:#ddd9d1!important;color:#151515!important;white-space:normal!important}
+  th{color:#5d5d59!important;background:#f0eee8!important}
+  tfoot td{color:#151515!important;background:#f3f1eb!important}
+  .traffic-daily-chart{height:auto!important;min-height:40mm!important;overflow:visible!important;margin:0 0 4mm!important;background:#f7f6f2!important;border:1px solid #dedbd5!important}
+  .traffic-day{flex:1 1 0!important;min-width:0!important}.traffic-day strong{font-size:6.2pt!important}
+  .traffic-summary-cards{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:1.5mm!important;padding:0!important}.traffic-summary-cards article{background:#f7f6f2!important;border:1px solid #dedbd5!important}
+  .crm-intro{display:block!important}.crm-brand-insights-section{padding:5mm!important}
+  .crm-campaign-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:2mm!important}
+  .execution-summary-panel h3,.digital-pauta-panel h3,.budget-breakdown h3{font-size:16pt!important;margin:0 0 4mm!important;color:#151515!important}
+  .execution-summary-card p,.digital-pauta-card p,.crm-campaign-card p,.evidence-card p,.brand-analysis-card p{font-size:7.4pt!important;line-height:1.35!important;color:#52524d!important}
+  .channel-list span,.execution-category-list span,.badge,.card-brand,.card-action-type,.budget-brand{font-size:6pt!important;border-color:#d8d4cc!important;color:#151515!important;background:#fff!important}
+  .evidence-card.featured{grid-column:auto!important;display:block!important}.evidence-image,.featured .evidence-image{height:42mm!important;min-height:0!important}.evidence-gallery{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:1mm!important;background:#fff!important;border-color:#dedbd5!important}.gallery-thumb{height:18mm!important}
+  .budget-section{background:#fff!important}.budget-bars{gap:3mm!important;margin-top:4mm!important}.budget-bar i{height:2mm!important;background:#dedbd5!important}.budget-detail summary{padding:0 0 4mm!important}.budget-detail summary>b{background:#151515!important;color:#fff!important}
+  .brands-section{background:#fff!important;color:#151515!important}.brand-analysis-card{min-height:68mm!important;padding:5mm!important}.brand-analysis-card h3{font-size:16pt!important;margin:8mm 0 4mm!important;color:inherit!important}.levis-card,.outlet-card,.wiseman-card{background:#151515!important;color:#fff!important;border-color:#151515!important}.desigual-card{background:#f1f0ec!important;color:#151515!important}.levis-card p,.outlet-card p,.wiseman-card p{color:#d7d7d2!important}.brand-card-top img{max-width:36mm!important;max-height:12mm!important}
+  footer{display:none!important}
+}

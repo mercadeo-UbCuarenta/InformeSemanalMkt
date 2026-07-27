@@ -414,6 +414,40 @@
   const normalizeStore = value => normalize(value)
     .replace(/\bcc\b/g, "").replace(/\bparque\b/g, "").replace(/\bbogota\b/g, "")
     .replace(/\bcanal\b/g, "").replace(/\s+/g, " ").trim();
+  const salesUnitOpen = new Set();
+
+  function renderSalesUnitDetails() {
+    const tbody = document.querySelector(".sales-panel tbody");
+    if (!tbody) return;
+    tbody.querySelectorAll(".sales-unit-detail-row").forEach(row => row.remove());
+    const source = window.reportStoreData || [];
+    tbody.querySelectorAll(".sales-unit-row[data-brand]").forEach(row => {
+      const brand = row.dataset.brand;
+      row.setAttribute("aria-expanded", salesUnitOpen.has(brand) ? "true" : "false");
+      const stores = source.filter(item => item.brand === brand)
+        .sort((a, b) => number(b.salesNow) - number(a.salesNow));
+      const detail = document.createElement("tr");
+      detail.className = "sales-unit-detail-row";
+      detail.dataset.brand = brand;
+      detail.hidden = row.getAttribute("aria-expanded") !== "true";
+      const body = stores.length ? `<div class="sales-unit-detail"><table>
+        <thead><tr><th>Tienda</th><th>Venta PY</th><th>Venta 2026</th><th>Var.</th><th>Meta</th><th>Cump.</th><th>Ticket</th><th>Tráfico 2026</th></tr></thead>
+        <tbody>${stores.map(store => `<tr>
+          <td class="store-cell"><strong>${escapeHtml(store.store)}</strong><small>${escapeHtml(brandLabels[brand] || brand)}</small></td>
+          <td>${displayMoney(number(store.salesPrev))}</td>
+          <td>${displayMoney(number(store.salesNow))}</td>
+          <td><span class="compliance-pill ${number(store.salesVar) >= 0 ? "met" : "missed"}"><i></i>${displayPercent(store.salesVar)}</span></td>
+          <td>${displayMoney(number(store.salesGoal))}</td>
+          <td><span class="compliance-pill ${number(store.salesCompliance) >= 1 ? "met" : "missed"}"><i></i>${store.salesCompliance !== "" && store.salesCompliance !== undefined ? displayPercent(store.salesCompliance) : "-"}</span></td>
+          <td>${displayMoney(number(store.ticket))}</td>
+          <td>${store.trafficNow !== "" && store.trafficNow !== undefined ? displayNumber(number(store.trafficNow)) : "-"}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>` : `<div class="sales-unit-detail"><p class="sales-unit-empty">Sin detalle de tiendas para ${escapeHtml(brandLabels[brand] || brand)}. Carga el Excel actualizado para ver el desglose.</p></div>`;
+      detail.innerHTML = `<td class="sales-unit-detail-cell" colspan="4">${body}</td>`;
+      row.after(detail);
+    });
+    window.applyActionFilters?.();
+  }
 
   function applySalesTrafficFormat(salesRows, trafficRows) {
     if (salesRows.length < 6 || trafficRows.length < 6) return {brands:0, stores:0};
@@ -542,6 +576,7 @@
     updateSplitLevis("levis-outlet");
 
     window.reportStoreData = combined;
+    renderSalesUnitDetails();
     renderStorePerformance();
     return {brands:new Set(combined.map(item => item.brand)).size, stores:combined.length};
   }
@@ -672,6 +707,7 @@
       select.value = window.selectedTrafficStore;
     }
     renderDailyTraffic();
+    renderSalesUnitDetails();
     renderStorePerformance();
     return window.reportDailyTraffic.length;
   }
@@ -733,11 +769,16 @@
     window.reportStoreData = Array.isArray(runtime.storeData) ? runtime.storeData : [];
     window.reportDailyTraffic = Array.isArray(runtime.dailyTraffic) ? runtime.dailyTraffic : [];
     window.reportTrafficStores = Array.isArray(runtime.trafficStores) ? runtime.trafficStores : [];
+    window.reportDigitalPautaData = Array.isArray(runtime.digitalPautaData) ? runtime.digitalPautaData : [];
     window.selectedTrafficStore = runtime.selectedTrafficStore || window.reportTrafficStores[0]?.key || "";
     window.reportBrandFilter = runtime.globalBrand || "all";
     restoreCRMData(runtime.crmData);
-    if (window.reportStoreData.length) renderStorePerformance();
+    if (window.reportStoreData.length) {
+      renderSalesUnitDetails();
+      renderStorePerformance();
+    }
     if (window.reportTrafficStores.length) renderDailyTraffic();
+    renderDigitalPauta(window.reportDigitalPautaData);
   }
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
@@ -857,23 +898,126 @@
   function renderDigitalPauta(data) {
     const container = document.querySelector("#digitalPautaRows");
     if (!container) return;
-    const digitalRows = data.filter(row => {
-      const text = [pick(row, "tipo", "canal"), pick(row, "canales", "canal"), pick(row, "titulo", "título", "campana", "campaña"), pick(row, "descripcion", "descripción")].join(" ");
-      const key = normalize(text);
-      return key.includes("pauta") || key.includes("digital") || key.includes("ads") || key.includes("meta") || key.includes("redes") || key.includes("instagram") || key.includes("facebook") || key.includes("tiktok") || key.includes("social");
-    });
-    container.innerHTML = digitalRows.map(row => {
-      const brand = brandKey(pick(row, "marca"));
-      const channels = String(pick(row, "canales", "canal") || "").split(/[,;+]/).map(item => item.trim()).filter(Boolean);
-      return `<article class="digital-pauta-card" data-brand="${brand}">
-        <div class="crm-campaign-top"><span>${escapeHtml(brandLabels[brand] || pick(row, "marca") || "Sin marca")}</span><b>${escapeHtml(pick(row, "tipo", "canal") || "Digital")}</b></div>
-        <h4>${escapeHtml(pick(row, "titulo", "título", "campana", "campaña") || "Acción digital")}</h4>
-        <p>${escapeHtml(pick(row, "descripcion", "descripción") || "Acción importada desde el Excel semanal.")}</p>
-        <div class="channel-list">${channels.map(channel => `<span>${escapeHtml(channel)}</span>`).join("")}</div>
-      </article>`;
-    }).join("") || '<article class="crm-campaign-empty">Sin pauta digital reportada para la semana.</article>';
+    const digitalRows = Array.isArray(data) ? data : [];
+    const finite = value => Number.isFinite(number(value)) ? number(value) : 0;
+    const sum = field => digitalRows.reduce((total, row) => total + finite(row[field]), 0);
+    const totalSpend = sum("spend");
+    const totalBudget = sum("budget");
+    const totalReach = sum("reach");
+    const totalClicks = sum("clicks");
+    const totalImpressions = sum("impressions");
+    const totalResults = sum("results");
+    const totalPurchases = sum("purchases");
+    const totalRevenue = sum("revenue");
+    const avgCpc = totalClicks ? totalSpend / totalClicks : 0;
+    const roas = totalSpend ? totalRevenue / totalSpend : 0;
+    const budgetUse = totalBudget ? totalSpend / totalBudget : 0;
+    const best = digitalRows.slice().sort((a, b) => finite(b.revenue) - finite(a.revenue) || finite(b.results) - finite(a.results))[0];
+    const byPortal = Array.from(digitalRows.reduce((map, row) => {
+      const portal = row.portal || "Sin portal";
+      if (!map.has(portal)) map.set(portal, {portal, spend:0, results:0, clicks:0});
+      const current = map.get(portal);
+      current.spend += finite(row.spend);
+      current.results += finite(row.results);
+      current.clicks += finite(row.clicks);
+      return map;
+    }, new Map()).values());
+    const maxPortalSpend = Math.max(...byPortal.map(item => item.spend), 1);
+    if (!digitalRows.length) {
+      container.innerHTML = '<article class="crm-campaign-empty">Sin pauta digital reportada para la semana. Carga el Excel con la pestaña "Pauta Digital".</article>';
+      const count = document.querySelector("#digitalPautaCount");
+      if (count) count.textContent = "Sin datos";
+      return;
+    }
+    container.innerHTML = `
+      <div class="digital-pauta-kpis">
+        <article><span>Importe gastado</span><strong>${displayMoney(totalSpend)}</strong><small>${displayPercent(budgetUse)} del presupuesto cargado</small></article>
+        <article><span>Alcance</span><strong>${displayNumber(totalReach)}</strong><small>${displayNumber(totalImpressions)} impresiones</small></article>
+        <article><span>Clics / CPC</span><strong>${displayNumber(totalClicks)}</strong><small>${displayMoney(avgCpc)} por clic</small></article>
+        <article><span>Compras / ROAS</span><strong>${displayNumber(totalPurchases)}</strong><small>${roas ? `${roas.toLocaleString("es-CO", {maximumFractionDigits:1})}x` : "Sin conversión"} · ${displayMoney(totalRevenue)}</small></article>
+      </div>
+      <div class="digital-pauta-split">
+        <article class="digital-pauta-summary">
+          <h4>Lectura de eficiencia</h4>
+          <div class="digital-pauta-bars">
+            ${byPortal.map(item => `<div class="digital-pauta-bar"><div><span>${escapeHtml(item.portal)}</span><b>${displayMoney(item.spend)}</b></div><i><em style="width:${Math.max(4, item.spend / maxPortalSpend * 100)}%"></em></i><small>${displayNumber(item.results)} resultados · ${displayNumber(item.clicks)} clics</small></div>`).join("")}
+          </div>
+        </article>
+        <article class="digital-pauta-summary">
+          <h4>Campaña destacada</h4>
+          <div class="commercial-brand-main"><strong>${escapeHtml(best?.store || "Sin dato")}</strong><span>${escapeHtml(best?.campaign || "Campaña digital")}</span></div>
+          <div class="commercial-brand-metrics">
+            <div><span>Gasto</span><b>${displayMoney(finite(best?.spend))}</b></div>
+            <div><span>Resultados</span><b>${displayNumber(finite(best?.results))}</b></div>
+            <div><span>CPC</span><b>${displayMoney(finite(best?.cpc))}</b></div>
+            <div><span>Valor compras</span><b>${best?.revenue ? displayMoney(finite(best.revenue)) : "Sin dato"}</b></div>
+          </div>
+        </article>
+      </div>
+      <div class="digital-pauta-grid">
+        ${digitalRows.map(row => `<article class="digital-pauta-card" data-brand="${escapeHtml(row.brand)}">
+          <div class="crm-campaign-top"><span>${escapeHtml(brandLabels[row.brand] || row.rawBrand || "Sin marca")}</span><b>${escapeHtml(row.portal || "Digital")}</b></div>
+          <h4>${escapeHtml(row.store || "Pauta digital")}</h4>
+          <p>${escapeHtml(row.campaign || "Campaña importada desde la pestaña Pauta Digital.")}</p>
+          <div class="digital-pauta-metrics">
+            <div><span>Gasto</span><b>${displayMoney(finite(row.spend))}</b></div>
+            <div><span>Resultados</span><b>${displayNumber(finite(row.results))}</b></div>
+            <div><span>Alcance</span><b>${displayNumber(finite(row.reach))}</b></div>
+            <div><span>Clics</span><b>${displayNumber(finite(row.clicks))}</b></div>
+            <div><span>CPC</span><b>${displayMoney(finite(row.cpc))}</b></div>
+            <div><span>Compras</span><b>${row.purchases ? displayNumber(finite(row.purchases)) : "Sin dato"}</b></div>
+          </div>
+          <div class="digital-pauta-card-foot">
+            <span class="digital-pauta-status">${escapeHtml(row.status || "Sin estado")}</span>
+            <span>${escapeHtml(row.resultIndicator || "Resultado")}</span>
+            <span>${escapeHtml(row.start || "-")} - ${escapeHtml(row.end || "-")}</span>
+          </div>
+        </article>`).join("")}
+      </div>`;
     const count = document.querySelector("#digitalPautaCount");
-    if (count) count.textContent = `${digitalRows.length} ${digitalRows.length === 1 ? "acción" : "acciones"}`;
+    if (count) count.textContent = `${digitalRows.length} ${digitalRows.length === 1 ? "campaña" : "campañas"}`;
+  }
+
+  function applyDigitalPauta(rows) {
+    if (rows.length < 2) {
+      window.reportDigitalPautaData = [];
+      renderDigitalPauta([]);
+      return 0;
+    }
+    const headers = rows[0];
+    const data = rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).map(row => {
+      const item = rowObject(headers, row);
+      const rawBrand = pick(item, "marca");
+      return {
+        rawBrand,
+        brand: brandKey(rawBrand) || "digital",
+        store: pick(item, "tienda"),
+        channel: pick(item, "canal"),
+        portal: pick(item, "portal"),
+        campaign: pick(item, "nombre de la campana", "nombre de la campaña", "campana", "campaña"),
+        status: pick(item, "entrega de la campana", "entrega de la campaña", "estado"),
+        results: pick(item, "resultados"),
+        resultIndicator: pick(item, "indicador de resultado"),
+        reach: pick(item, "alcance"),
+        clicks: pick(item, "clics todos", "clicks todos", "clics"),
+        cpm: pick(item, "cpm costo por mil impresiones cop", "cpm"),
+        cpc: pick(item, "cpc costo por clic en el enlace cop", "cpc"),
+        costPerResult: pick(item, "costo por resultados"),
+        budget: pick(item, "presupuesto del conjunto de anuncios", "presupuesto"),
+        spend: pick(item, "importe gastado cop", "importe gastado", "gasto"),
+        impressions: pick(item, "impresiones"),
+        purchases: pick(item, "compras"),
+        offlinePurchases: pick(item, "compras offline"),
+        revenue: pick(item, "valor de conversion de compras", "valor de conversión de compras"),
+        offlineRevenue: pick(item, "valor de conversion de compras offline", "valor de conversión de compras offline"),
+        start: displayDate(pick(item, "inicio")),
+        end: displayDate(pick(item, "finalizacion", "finalización")),
+        attribution: pick(item, "configuracion de atribucion", "configuración de atribución")
+      };
+    });
+    window.reportDigitalPautaData = data;
+    renderDigitalPauta(data);
+    return data.length;
   }
   function actionCard(row, linkedEvidence = []) {
     const brand = brandKey(pick(row, "marca")) || "levis";
@@ -925,7 +1069,6 @@
     if (!data.length) return 0;
     const links = evidenceMap(evidenceRows);
     renderExecutionSummary(data);
-    renderDigitalPauta(data);
     const grid = document.querySelector("#evidenceGrid");
     grid.innerHTML = data.map(row => actionCard(row, evidenceForAction(links, pick(row, "marca"), pick(row, "titulo", "título", "campana", "campaña")))).join("");
     window.hydrateGalleryControls?.(grid);
@@ -952,6 +1095,8 @@
     }
     const dailyTraffic = applyDailyTraffic(sheetByName(workbook, "Trafico Detallado"));
     const crm = applyCRM(sheetByName(workbook, "CRM"));
+    const digitalPautaSheet = sheetByName(workbook, "Pauta Digital");
+    const digitalPauta = digitalPautaSheet.length ? applyDigitalPauta(digitalPautaSheet) : applyDigitalPauta([]);
     const actions = applyActions(sheetByName(workbook, "Acciones"), sheetByName(workbook, "Evidencias"));
     const budgetSheet = sheetByName(workbook, "Ejecucion Ppto").length
       ? sheetByName(workbook, "Ejecucion Ppto")
@@ -959,7 +1104,7 @@
     const budget = budgetSheet.length ? window.BudgetModule?.applySheet?.(budgetSheet) || 0 : 0;
     window.applyActionFilters?.();
     window.saveReport?.(false);
-    status(`Excel aplicado: ${brands} marcas${stores ? `, ${stores} tiendas` : ""}, ${dailyTraffic} registros de tráfico, ${crm} campañas CRM${actions ? `, ${actions} acciones` : ""}${budget ? ` y ${budget} movimientos de presupuesto` : ""}.`);
+    status(`Excel aplicado: ${brands} marcas${stores ? `, ${stores} tiendas` : ""}, ${dailyTraffic} registros de tráfico, ${crm} campañas CRM${digitalPauta ? `, ${digitalPauta} campañas de pauta digital` : ""}${actions ? `, ${actions} acciones` : ""}${budget ? ` y ${budget} movimientos de presupuesto` : ""}.`);
     window.showToast?.("Datos del Excel actualizados");
   }
 
@@ -1121,6 +1266,15 @@
   handle(document.querySelector("#importExcel"), importExcel);
   handle(document.querySelector("#importPowerPoint"), importPowerPoint);
   document.addEventListener("click", event => {
+    const salesUnit = event.target.closest(".sales-unit-row");
+    if (salesUnit) {
+      event.salesUnitHandled = true;
+      const brand = salesUnit.dataset.brand;
+      if (salesUnitOpen.has(brand)) salesUnitOpen.delete(brand);
+      else salesUnitOpen.add(brand);
+      renderSalesUnitDetails();
+      return;
+    }
     const trafficRow = event.target.closest(".traffic-rank-row");
     if (trafficRow) {
       window.selectedTrafficStore = trafficRow.dataset.trafficStore;
@@ -1129,6 +1283,14 @@
       renderDailyTraffic();
     }
   });
+  document.addEventListener("keydown", event => {
+    if (!["Enter", " "].includes(event.key)) return;
+    const salesUnit = event.target.closest(".sales-unit-row");
+    if (!salesUnit) return;
+    event.preventDefault();
+    event.salesUnitHandled = true;
+    salesUnit.click();
+  });
   document.addEventListener("change", event => {
     if (!event.target.matches("#dailyTrafficStore")) return;
     window.selectedTrafficStore = event.target.value;
@@ -1136,7 +1298,7 @@
   });
   window.ReportImporter = {
     importExcel, importPowerPoint, unzip, parseWorkbook, applySalesTrafficFormat,
-    applyDailyTraffic, renderStorePerformance, renderDailyTraffic, restoreRuntimeData
+    applyDailyTraffic, applyDigitalPauta, renderStorePerformance, renderDailyTraffic, renderSalesUnitDetails, renderDigitalPauta, restoreRuntimeData
   };
   window.applyBrandSummaryFilter = applyBrandSummaryFilter;
 })();

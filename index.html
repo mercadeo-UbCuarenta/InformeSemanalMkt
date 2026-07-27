@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
   <header class="topbar">
@@ -125,11 +125,11 @@
                 <tr><th>Unidad</th><th>2025</th><th>2026</th><th>Variación vs. PY</th></tr>
               </thead>
               <tbody>
-                <tr data-brand="levis"><td>Levi's Línea</td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-</span></td></tr>
-                <tr data-brand="levis-outlet"><td>Levi's Outlet</td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-</span></td></tr>
-                <tr data-brand="desigual"><td>Desigual</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$107,3M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$87,9M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-18%</span></td></tr>
-                <tr data-brand="wiseman"><td>Wiseman</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$18,2M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$16,4M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-10%</span></td></tr>
-                <tr data-brand="digital"><td>Digital</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$6,0M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$21,0M</td><td><span class="compliance-pill met" data-col="variacion"><i></i>+253%</span></td></tr>
+                <tr class="sales-unit-row" data-brand="levis" tabindex="0" aria-expanded="false"><td><button class="sales-unit-toggle" type="button" aria-label="Ver detalle Levi's Línea">Levi's Línea</button></td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-</span></td></tr>
+                <tr class="sales-unit-row" data-brand="levis-outlet" tabindex="0" aria-expanded="false"><td><button class="sales-unit-toggle" type="button" aria-label="Ver detalle Levi's Outlet">Levi's Outlet</button></td><td class="editable" data-col="ventas-anterior" contenteditable="false">Por actualizar</td><td class="editable" data-col="ventas-actual" contenteditable="false">Por actualizar</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-</span></td></tr>
+                <tr class="sales-unit-row" data-brand="desigual" tabindex="0" aria-expanded="false"><td><button class="sales-unit-toggle" type="button" aria-label="Ver detalle Desigual">Desigual</button></td><td class="editable" data-col="ventas-anterior" contenteditable="false">$107,3M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$87,9M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-18%</span></td></tr>
+                <tr class="sales-unit-row" data-brand="wiseman" tabindex="0" aria-expanded="false"><td><button class="sales-unit-toggle" type="button" aria-label="Ver detalle Wiseman">Wiseman</button></td><td class="editable" data-col="ventas-anterior" contenteditable="false">$18,2M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$16,4M</td><td><span class="compliance-pill missed" data-col="variacion"><i></i>-10%</span></td></tr>
+                <tr class="sales-unit-row" data-brand="digital" tabindex="0" aria-expanded="false"><td><button class="sales-unit-toggle" type="button" aria-label="Ver detalle Digital">Digital</button></td><td class="editable" data-col="ventas-anterior" contenteditable="false">$6,0M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$21,0M</td><td><span class="compliance-pill met" data-col="variacion"><i></i>+253%</span></td></tr>
               </tbody>
               <tfoot>
                 <tr><td>Total</td><td class="editable" data-col="ventas-anterior" contenteditable="false">$805,9M</td><td class="editable" data-col="ventas-actual" contenteditable="false">$900,7M</td><td><span class="compliance-pill met" data-col="variacion"><i></i>+12%</span></td></tr>
@@ -289,7 +289,7 @@
           <span><small>2.3 Marketing digital</small><strong>Pauta Digital</strong></span>
           <b id="digitalPautaCount">Sin datos</b>
         </div>
-        <div class="digital-pauta-grid" id="digitalPautaRows">
+        <div class="digital-pauta-dashboard" id="digitalPautaRows">
           <article class="crm-campaign-empty">Carga el Excel para visualizar acciones de pauta digital.</article>
         </div>
       </section>
@@ -529,9 +529,9 @@
       <span id="photoViewerMeta"></span>
     </div>
   </div>
-  <script src="import-data.js?v=15"></script>
+  <script src="import-data.js?v=17"></script>
   <script src="budget.js?v=2"></script>
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=27"></script>
 </body>
 </html>
 
