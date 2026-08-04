@@ -241,8 +241,14 @@ function createReportPayload() {
 }
 
 function applyReportPayload(payload, label = "Último guardado") {
-  if (!payload?.content) throw new Error("Formato inválido");
-  if (Number(payload.version) >= 5) {
+  if (!payload?.runtime && !payload?.content) throw new Error("Formato inválido");
+  const publishedContent = String(payload.content || "");
+  const hasCurrentStructure = publishedContent.includes('href="#resumen">Performance')
+    && publishedContent.includes('href="#marcas">Análisis')
+    && publishedContent.includes('id="storePerformanceRows"')
+    && publishedContent.includes('id="digitalPautaRows"')
+    && publishedContent.includes('id="budgetRows"');
+  if (Number(payload.version) >= 5 && (!isPublished || hasCurrentStructure)) {
     content.innerHTML = payload.content;
     footer.innerHTML = payload.footer || originalFooter;
   }
