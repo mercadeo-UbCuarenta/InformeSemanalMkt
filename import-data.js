@@ -770,9 +770,11 @@
     window.reportDailyTraffic = Array.isArray(runtime.dailyTraffic) ? runtime.dailyTraffic : [];
     window.reportTrafficStores = Array.isArray(runtime.trafficStores) ? runtime.trafficStores : [];
     window.reportDigitalPautaData = Array.isArray(runtime.digitalPautaData) ? runtime.digitalPautaData : [];
+    window.reportWhatsappData = runtime.whatsappData || null;
     window.selectedTrafficStore = runtime.selectedTrafficStore || window.reportTrafficStores[0]?.key || "";
     window.reportBrandFilter = runtime.globalBrand || "all";
     restoreCRMData(runtime.crmData);
+    renderWhatsappReport(window.reportWhatsappData);
     if (window.reportStoreData.length) {
       renderSalesUnitDetails();
       renderStorePerformance();
@@ -782,6 +784,186 @@
   }
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+  const compactRows = rows => rows.map(row => (row || []).map(value => value === undefined || value === null ? "" : value));
+  const uniqueTexts = values => Array.from(new Set(values.map(value => String(value ?? "").trim()).filter(Boolean)));
+  const cellValue = (rows, row, column) => rows[row - 1]?.[column - 1] ?? "";
+  const metricValue = (label, value) => {
+    const key = normalize(label);
+    if (key.includes("venta") || key.includes("ticket")) return displayMoney(number(value));
+    if (key.includes("conversion") || key.includes("respuesta") || key.includes("participacion") || key.includes("tasa")) return displayPercent(number(value));
+    return displayNumber(number(value));
+  };
+  const metricPairs = (rows, row, maxColumn = 8) => {
+    const result = [];
+    for (let column = 1; column <= maxColumn; column += 2) {
+      const label = cellValue(rows, row, column);
+      const value = cellValue(rows, row, column + 1);
+      if (label !== "" && value !== "") result.push({label:String(label), value});
+    }
+    return result;
+  };
+
+  function parseWhatsappReport(rows) {
+    const sheet = compactRows(rows);
+    if (!sheet.length || !String(cellValue(sheet, 1, 1)).toLowerCase().includes("whatsapp")) return null;
+    const stores = [];
+    for (let row = 19; row <= 24; row++) {
+      const store = cellValue(sheet, row, 1);
+      if (!store) continue;
+      stores.push({
+        store:String(store),
+        converted:number(cellValue(sheet, row, 2)),
+        revenue:number(cellValue(sheet, row, 3)),
+        units:number(cellValue(sheet, row, 4)),
+        ticket:number(cellValue(sheet, row, 5)),
+        sameDateClients:number(cellValue(sheet, row, 6)),
+        sameDateRevenue:number(cellValue(sheet, row, 7)),
+        share:number(cellValue(sheet, row, 8))
+      });
+    }
+    const categories = [];
+    const frictions = [];
+    for (let row = 27; row <= 33; row++) {
+      if (cellValue(sheet, row, 1)) categories.push({
+        name:String(cellValue(sheet, row, 1)),
+        conversations:number(cellValue(sheet, row, 2)),
+        share:number(cellValue(sheet, row, 3))
+      });
+      if (cellValue(sheet, row, 5)) frictions.push({
+        name:String(cellValue(sheet, row, 5)),
+        conversations:number(cellValue(sheet, row, 6)),
+        share:number(cellValue(sheet, row, 7))
+      });
+    }
+    const details = [];
+    for (let row = 37; row <= 45; row++) {
+      if (!cellValue(sheet, row, 1)) continue;
+      details.push({
+        phone:String(cellValue(sheet, row, 1)),
+        saleStore:String(cellValue(sheet, row, 2)),
+        campaignStore:String(cellValue(sheet, row, 3)),
+        campaignSent:displayDate(cellValue(sheet, row, 4)),
+        saleDate:displayDate(cellValue(sheet, row, 5)),
+        days:number(cellValue(sheet, row, 6)),
+        revenue:number(cellValue(sheet, row, 7)),
+        units:number(cellValue(sheet, row, 8)),
+        signal:String(cellValue(sheet, row, 9) || "")
+      });
+    }
+    return {
+      title:String(cellValue(sheet, 1, 1) || "Informe WhatsApp"),
+      subtitle:String(cellValue(sheet, 2, 1) || ""),
+      metrics:[
+        ...metricPairs(sheet, 5),
+        ...metricPairs(sheet, 6),
+        ...metricPairs(sheet, 7)
+      ],
+      reading:uniqueTexts([6, 7, 8, 9].flatMap(row => [10, 11, 12, 13, 14, 15, 16].map(column => cellValue(sheet, row, column)))),
+      funnel:[12, 13, 14, 15].map(row => ({
+        stage:String(cellValue(sheet, row, 1) || ""),
+        clients:number(cellValue(sheet, row, 2)),
+        reachRate:number(cellValue(sheet, row, 3)),
+        previousRate:number(cellValue(sheet, row, 4))
+      })).filter(item => item.stage),
+      stores,
+      categories,
+      frictions,
+      recommendations:uniqueTexts([26, 27, 28, 29, 30].flatMap(row => [10, 11, 12, 13, 14, 15, 16].map(column => cellValue(sheet, row, column)))),
+      details,
+      methodology:uniqueTexts([47, 48, 49, 50, 51, 52, 54].map(row => cellValue(sheet, row, 1)))
+    };
+  }
+
+  function renderWhatsappReport(report) {
+    const container = document.querySelector("#whatsappReportRows");
+    if (!container) return 0;
+    if (!report) {
+      container.innerHTML = '<article class="crm-campaign-empty">Carga el Excel con la pestaña "Whatsapp" para visualizar el informe de campaña.</article>';
+      const count = document.querySelector("#whatsappReportCount");
+      if (count) count.textContent = "Sin datos";
+      return 0;
+    }
+    const getMetric = (...names) => report.metrics.find(metric => names.some(name => normalize(metric.label).includes(normalize(name))))?.value || 0;
+    const reached = getMetric("alcanzadas");
+    const answered = getMetric("respondieron");
+    const converted = getMetric("convertidas");
+    const revenue = getMetric("venta neta atribuida");
+    const conversion = getMetric("conversion");
+    const maxFunnel = Math.max(...report.funnel.map(item => item.clients), 1);
+    const maxStore = Math.max(...report.stores.filter(item => normalize(item.store) !== "total").map(item => item.revenue), 1);
+    const maxCategory = Math.max(...report.categories.map(item => item.conversations), 1);
+    const maxFriction = Math.max(...report.frictions.map(item => item.conversations), 1);
+    container.innerHTML = `
+      <div class="whatsapp-hero">
+        <div>
+          <span class="mini-label">Campaña especial</span>
+          <h3>${escapeHtml(report.title)}</h3>
+          <p>${escapeHtml(report.subtitle)}</p>
+        </div>
+        <div class="whatsapp-kpis">
+          <article><span>Alcanzadas</span><strong>${displayNumber(number(reached))}</strong><small>${displayPercent(answered && reached ? number(answered) / number(reached) : 0)} respuesta</small></article>
+          <article><span>Respondieron</span><strong>${displayNumber(number(answered))}</strong><small>${displayNumber(number(getMetric("atendidas")))} atendidas</small></article>
+          <article><span>Convertidas</span><strong>${displayNumber(number(converted))}</strong><small>${displayPercent(conversion)} conversión</small></article>
+          <article><span>Venta atribuida</span><strong>${displayMoney(number(revenue))}</strong><small>${displayMoney(number(getMetric("ticket por clienta")))} ticket</small></article>
+        </div>
+      </div>
+      <div class="whatsapp-reading">
+        <article>
+          <h4>Lectura principal</h4>
+          <ul>${report.reading.map(item => `<li>${escapeHtml(item.replace(/^\d+\.\s*/, ""))}</li>`).join("")}</ul>
+        </article>
+        <article>
+          <h4>Acciones recomendadas</h4>
+          <ul>${report.recommendations.map(item => `<li>${escapeHtml(item.replace(/^•\s*/, ""))}</li>`).join("")}</ul>
+        </article>
+      </div>
+      <div class="whatsapp-analysis-grid">
+        <article class="whatsapp-block">
+          <h4>Embudo de campaña</h4>
+          <div class="whatsapp-funnel">${report.funnel.map(item => `<div class="whatsapp-funnel-row">
+            <div><span>${escapeHtml(item.stage)}</span><b>${displayNumber(item.clients)}</b></div>
+            <i><em style="width:${Math.max(4, item.clients / maxFunnel * 100)}%"></em></i>
+            <small>${displayPercent(item.reachRate)} vs. alcance · ${displayPercent(item.previousRate)} vs. etapa anterior</small>
+          </div>`).join("")}</div>
+        </article>
+        <article class="whatsapp-block">
+          <h4>Venta atribuible por tienda</h4>
+          <div class="whatsapp-store-bars">${report.stores.filter(item => normalize(item.store) !== "total").map(item => `<div class="whatsapp-store-bar">
+            <div><span>${escapeHtml(item.store)}</span><b>${displayMoney(item.revenue)}</b></div>
+            <i><em style="width:${Math.max(4, item.revenue / maxStore * 100)}%"></em></i>
+            <small>${displayNumber(item.converted)} clientas · ${displayNumber(item.units)} unidades · ${displayPercent(item.share)}</small>
+          </div>`).join("")}</div>
+        </article>
+        <article class="whatsapp-block">
+          <h4>Qué pidieron las clientas</h4>
+          <div class="whatsapp-signal-list">${report.categories.map(item => `<div><span>${escapeHtml(item.name)}</span><b>${displayNumber(item.conversations)}</b><i><em style="width:${Math.max(4, item.conversations / maxCategory * 100)}%"></em></i><small>${displayPercent(item.share)}</small></div>`).join("")}</div>
+        </article>
+        <article class="whatsapp-block">
+          <h4>Fricciones de atención</h4>
+          <div class="whatsapp-signal-list">${report.frictions.map(item => `<div><span>${escapeHtml(item.name)}</span><b>${displayNumber(item.conversations)}</b><i><em style="width:${Math.max(4, item.conversations / maxFriction * 100)}%"></em></i><small>${displayPercent(item.share)}</small></div>`).join("")}</div>
+        </article>
+      </div>
+      <details class="whatsapp-detail">
+        <summary><span><small>Auditoría</small><strong>Detalle anonimizado y metodología</strong></span><b>${report.details.length} clientas</b></summary>
+        <div class="table-wrap detail-table-wrap">
+          <table>
+            <thead><tr><th>Celular</th><th>Tienda venta</th><th>Tienda campaña</th><th>Envío</th><th>Fecha venta</th><th>Días</th><th>Venta neta</th><th>Unidades</th><th>Señal</th></tr></thead>
+            <tbody>${report.details.map(item => `<tr><td>${escapeHtml(item.phone)}</td><td>${escapeHtml(item.saleStore)}</td><td>${escapeHtml(item.campaignStore)}</td><td>${escapeHtml(item.campaignSent)}</td><td>${escapeHtml(item.saleDate)}</td><td>${displayNumber(item.days)}</td><td>${displayMoney(item.revenue)}</td><td>${displayNumber(item.units)}</td><td>${escapeHtml(item.signal)}</td></tr>`).join("")}</tbody>
+          </table>
+        </div>
+        <ul class="whatsapp-methodology">${report.methodology.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </details>`;
+    const count = document.querySelector("#whatsappReportCount");
+    if (count) count.textContent = `${displayNumber(number(converted))} convertidas · ${displayMoney(number(revenue))}`;
+    return 1;
+  }
+
+  function applyWhatsapp(rows) {
+    const report = parseWhatsappReport(rows);
+    window.reportWhatsappData = report;
+    return renderWhatsappReport(report);
+  }
+
   const defaultImage = brand => brand === "desigual" ? "assets/ventas-privadas.png" : brand === "wiseman" ? "assets/wiseman-papa.png" : "assets/papa-con-estilo.png";
   const driveImageId = value => String(value ?? "").match(/\/file\/d\/([a-zA-Z0-9_-]+)/)?.[1]
     || String(value ?? "").match(/[?&]id=([a-zA-Z0-9_-]+)/)?.[1]
@@ -1095,6 +1277,7 @@
     }
     const dailyTraffic = applyDailyTraffic(sheetByName(workbook, "Trafico Detallado"));
     const crm = applyCRM(sheetByName(workbook, "CRM"));
+    const whatsapp = applyWhatsapp(sheetByName(workbook, "Whatsapp"));
     const digitalPautaSheet = sheetByName(workbook, "Pauta Digital");
     const digitalPauta = digitalPautaSheet.length ? applyDigitalPauta(digitalPautaSheet) : applyDigitalPauta([]);
     const actions = applyActions(sheetByName(workbook, "Acciones"), sheetByName(workbook, "Evidencias"));
@@ -1104,7 +1287,7 @@
     const budget = budgetSheet.length ? window.BudgetModule?.applySheet?.(budgetSheet) || 0 : 0;
     window.applyActionFilters?.();
     window.saveReport?.(false);
-    status(`Excel aplicado: ${brands} marcas${stores ? `, ${stores} tiendas` : ""}, ${dailyTraffic} registros de tráfico, ${crm} campañas CRM${digitalPauta ? `, ${digitalPauta} campañas de pauta digital` : ""}${actions ? `, ${actions} acciones` : ""}${budget ? ` y ${budget} movimientos de presupuesto` : ""}.`);
+    status(`Excel aplicado: ${brands} marcas${stores ? `, ${stores} tiendas` : ""}, ${dailyTraffic} registros de tráfico, ${crm} campañas CRM${whatsapp ? ", informe WhatsApp" : ""}${digitalPauta ? `, ${digitalPauta} campañas de pauta digital` : ""}${actions ? `, ${actions} acciones` : ""}${budget ? ` y ${budget} movimientos de presupuesto` : ""}.`);
     window.showToast?.("Datos del Excel actualizados");
   }
 
@@ -1298,7 +1481,7 @@
   });
   window.ReportImporter = {
     importExcel, importPowerPoint, unzip, parseWorkbook, applySalesTrafficFormat,
-    applyDailyTraffic, applyDigitalPauta, renderStorePerformance, renderDailyTraffic, renderSalesUnitDetails, renderDigitalPauta, restoreRuntimeData
+    applyDailyTraffic, applyDigitalPauta, applyWhatsapp, renderWhatsappReport, renderStorePerformance, renderDailyTraffic, renderSalesUnitDetails, renderDigitalPauta, restoreRuntimeData
   };
   window.applyBrandSummaryFilter = applyBrandSummaryFilter;
 })();

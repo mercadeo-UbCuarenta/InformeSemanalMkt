@@ -57,6 +57,11 @@ function ensureReportStructure() {
       const evidence = actions.querySelector(".evidence-section-heading");
       if (source) actions.insertBefore(source, evidence || null);
     }
+    if (!actions.querySelector("#whatsappReportRows")) {
+      const source = sectionFromOriginal("#whatsappReportRows")?.closest(".whatsapp-report-panel");
+      const digital = actions.querySelector(".digital-pauta-panel");
+      if (source) actions.insertBefore(source, digital || actions.querySelector(".evidence-section-heading") || null);
+    }
   }
   const resumen = content.querySelector("#resumen");
   const acciones = content.querySelector("#acciones");
@@ -232,6 +237,7 @@ function createReportPayload() {
       dailyTraffic: window.reportDailyTraffic || [],
       trafficStores: window.reportTrafficStores || [],
       crmData: window.reportCRMData || [],
+      whatsappData: window.reportWhatsappData || null,
       digitalPautaData: window.reportDigitalPautaData || [],
       budgetData: window.reportBudgetData || [],
       selectedTrafficStore: window.selectedTrafficStore || "",
@@ -244,9 +250,10 @@ function applyReportPayload(payload, label = "Último guardado") {
   if (!payload?.runtime && !payload?.content) throw new Error("Formato inválido");
   const publishedContent = String(payload.content || "");
   const hasCurrentStructure = publishedContent.includes('id="storePerformanceRows"')
+    && publishedContent.includes('id="whatsappReportRows"')
     && publishedContent.includes('id="digitalPautaRows"')
     && publishedContent.includes('id="budgetRows"');
-  if (Number(payload.version) >= 5 && (!isPublished || hasCurrentStructure)) {
+  if (Number(payload.version) >= 5 && hasCurrentStructure) {
     content.innerHTML = payload.content;
     footer.innerHTML = payload.footer || originalFooter;
   }
