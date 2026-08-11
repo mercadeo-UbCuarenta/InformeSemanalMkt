@@ -765,6 +765,55 @@
     }
   }
 
+  function renderSummaryData(summary = {}) {
+    if (!summary || typeof summary !== "object") return;
+    window.reportSummaryData = summary;
+    setText('[data-field="periodo"]', summary.period);
+    setText('[data-field="semana-informe"]', summary.week);
+    setText('[data-field="variacion-compania"]', displayPercent(summary.companyVariation));
+    setText('[data-field="ventas-semana"]', displayMoney(number(summary.salesWeek)));
+    setText('[data-field="variacion-semana"]', displayPercent(summary.salesVariation));
+    setText('[data-field="meta-semana"]', displayMoney(number(summary.salesGoal)));
+    setText('[data-field="cumplimiento-meta"]', displayPercent(summary.salesCompliance));
+    setText('[data-field="trafico-semana"]', displayNumber(number(summary.trafficWeek)));
+    setText('[data-field="cumplimiento-trafico"]', displayPercent(summary.trafficCompliance));
+    setText('[data-field="trafico-meta"]',
+      summary.trafficGoal ? `${displayNumber(number(summary.trafficWeek))} / ${displayNumber(number(summary.trafficGoal))}` : "");
+    setText('[data-field="ticket-compania"]', displayMoney(number(summary.ticketAverage)));
+    setText('.sales-panel tfoot [data-col="ventas-anterior"]', displayMoney(number(summary.salesPrevious)));
+    setText('.sales-panel tfoot [data-col="ventas-actual"]', displayMoney(number(summary.salesWeek)));
+    if (summary.salesPrevious || summary.salesWeek) {
+      setVariationPill('.sales-panel tfoot [data-col="variacion"]', summary.salesPrevious, summary.salesWeek);
+    }
+    const radial = document.querySelector(".radial");
+    if (radial && summary.salesCompliance !== undefined && summary.salesCompliance !== null) {
+      radial.style.setProperty("--progress", Math.min(100, number(summary.salesCompliance) * 100));
+    }
+    const trafficBar = document.querySelector(".traffic-bar .bar i");
+    if (trafficBar && summary.trafficCompliance !== undefined && summary.trafficCompliance !== null) {
+      trafficBar.style.width = `${Math.min(100, number(summary.trafficCompliance) * 100)}%`;
+    }
+    (Array.isArray(summary.brands) ? summary.brands : []).forEach(item => {
+      const key = item.brand;
+      const salesPrev = number(item.salesPrevious);
+      const salesNow = number(item.salesWeek);
+      setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-anterior"]`, displayMoney(salesPrev));
+      setText(`.sales-panel tr[data-brand="${key}"] [data-col="ventas-actual"]`, displayMoney(salesNow));
+      setVariationPill(`.sales-panel tr[data-brand="${key}"] [data-col="variacion"]`, salesPrev, salesNow);
+      const focus = document.querySelector(`.brand-focus [data-brand="${key}"]`);
+      if (focus) {
+        const ticket = focus.querySelector('[data-metric="ticket-promedio"]');
+        if (ticket) ticket.textContent = displayMoney(number(item.ticketAverage));
+        const repurchase = focus.querySelector('[data-metric="tasa-recompra"]');
+        if (repurchase && item.conversion !== undefined && item.conversion !== null) repurchase.textContent = displayPercent(item.conversion);
+      }
+      const analysisVariation = document.querySelector(`.brand-analysis [data-brand="${key}"] [data-metric="variacion"]`);
+      if (analysisVariation && item.salesVariation !== undefined && item.salesVariation !== null) {
+        analysisVariation.textContent = displayPercent(item.salesVariation);
+      }
+    });
+  }
+
   function restoreRuntimeData(runtime = {}) {
     window.reportStoreData = Array.isArray(runtime.storeData) ? runtime.storeData : [];
     window.reportDailyTraffic = Array.isArray(runtime.dailyTraffic) ? runtime.dailyTraffic : [];
@@ -773,6 +822,7 @@
     window.reportWhatsappData = runtime.whatsappData || null;
     window.selectedTrafficStore = runtime.selectedTrafficStore || window.reportTrafficStores[0]?.key || "";
     window.reportBrandFilter = runtime.globalBrand || "all";
+    renderSummaryData(runtime.summaryData);
     restoreCRMData(runtime.crmData);
     renderWhatsappReport(window.reportWhatsappData);
     if (window.reportStoreData.length) {

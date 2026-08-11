@@ -233,6 +233,7 @@ function createReportPayload() {
     content: contentForExport(),
     footer: footer.innerHTML,
     runtime: {
+      summaryData: window.reportSummaryData || null,
       storeData: window.reportStoreData || [],
       dailyTraffic: window.reportDailyTraffic || [],
       trafficStores: window.reportTrafficStores || [],
