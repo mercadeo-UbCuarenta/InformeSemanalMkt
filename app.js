@@ -237,6 +237,7 @@ function createReportPayload() {
       storeData: window.reportStoreData || [],
       dailyTraffic: window.reportDailyTraffic || [],
       trafficStores: window.reportTrafficStores || [],
+      trafficGoals: window.reportTrafficGoals || {},
       crmData: window.reportCRMData || [],
       whatsappData: window.reportWhatsappData || null,
       digitalPautaData: window.reportDigitalPautaData || [],
