@@ -908,6 +908,8 @@
     window.reportTrafficStores = Array.isArray(runtime.trafficStores) ? runtime.trafficStores : [];
     window.reportTrafficGoals = runtime.trafficGoals && typeof runtime.trafficGoals === "object" ? runtime.trafficGoals : {};
     window.reportDigitalPautaData = Array.isArray(runtime.digitalPautaData) ? runtime.digitalPautaData : [];
+    window.reportActionsData = Array.isArray(runtime.actionsData) ? runtime.actionsData : [];
+    window.reportEvidenceData = Array.isArray(runtime.evidenceData) ? runtime.evidenceData : [];
     window.reportWhatsappData = runtime.whatsappData || null;
     window.selectedTrafficStore = runtime.selectedTrafficStore || window.reportTrafficStores[0]?.key || "";
     window.reportBrandFilter = runtime.globalBrand || "all";
@@ -920,6 +922,7 @@
     }
     if (window.reportTrafficStores.length) renderDailyTraffic();
     renderDigitalPauta(window.reportDigitalPautaData);
+    restoreActionsData(window.reportActionsData, window.reportEvidenceData);
   }
 
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
@@ -1140,11 +1143,12 @@
   }
 
   function evidenceMap(rows) {
-    if (rows.length < 2) return new Map();
-    const headers = rows[0];
+    if (!Array.isArray(rows) || !rows.length) return new Map();
+    const objectRows = Array.isArray(rows[0])
+      ? rows.length < 2 ? [] : rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).map(row => rowObject(rows[0], row))
+      : rows.filter(row => row && typeof row === "object");
     const map = new Map();
-    rows.slice(1).filter(row => row.some(value => value !== undefined && value !== "")).forEach(raw => {
-      const row = rowObject(headers, raw);
+    objectRows.forEach(row => {
       const brand = pick(row, "marca");
       const campaign = pick(row, "campana", "campaña");
       const source = driveImageUrl(pick(row, "enlace de drive", "enlace drive", "url", "enlace"));
@@ -1161,6 +1165,19 @@
     });
     map.forEach(items => items.sort((a, b) => Number(b.principal) - Number(a.principal) || a.order - b.order));
     return map;
+  }
+
+  function restoreActionsData(data = [], evidenceRows = []) {
+    if (!Array.isArray(data) || !data.length) return;
+    const links = evidenceMap(evidenceRows);
+    renderExecutionSummary(data);
+    const grid = document.querySelector("#evidenceGrid");
+    if (grid) {
+      grid.innerHTML = data.map(row => actionCard(row, evidenceForAction(links, pick(row, "marca"), pick(row, "titulo", "título", "campana", "campaña")))).join("");
+      window.hydrateGalleryControls?.(grid);
+      window.resetActionFilters?.();
+      window.refreshEditingState?.();
+    }
   }
   const actionCategory = value => {
     const key = normalize(value);
@@ -1191,35 +1208,147 @@
     return "Otros";
   }
 
+  function executionGroups(row) {
+    const channels = String(pick(row, "canales", "canal") || "")
+      .split(/[,;+]/)
+      .map(item => item.trim())
+      .filter(Boolean);
+    const groups = new Set(channels.map(channel => executionGroup({tipo:channel, canales:channel})));
+    groups.add(executionGroup(row));
+    if (groups.size > 1) groups.delete("Otros");
+    return [...groups];
+  }
+
   function renderExecutionSummary(data) {
     const container = document.querySelector("#executionSummaryRows");
     if (!container) return;
+    const cleanData = Array.isArray(data) ? data : [];
     const brands = ["levis", "levis-outlet", "desigual", "wiseman", "digital"].filter(brand =>
-      data.some(row => brandKey(pick(row, "marca")) === brand)
+      cleanData.some(row => brandKey(pick(row, "marca")) === brand)
     );
-    container.innerHTML = brands.map(brand => {
-      const rows = data.filter(row => brandKey(pick(row, "marca")) === brand);
-      const groups = Array.from(rows.reduce((map, row) => {
-        const group = executionGroup(row);
+    const grouped = Array.from(cleanData.reduce((map, row) => {
+      executionGroups(row).forEach(group => {
         if (!map.has(group)) map.set(group, []);
         map.get(group).push(row);
-        return map;
-      }, new Map())).sort((a, b) => b[1].length - a[1].length);
-      const campaigns = rows.map(row => pick(row, "titulo", "título", "campana", "campaña")).filter(Boolean);
-      return `<article class="execution-summary-card" data-brand="${brand}">
-        <div class="execution-summary-head"><span>${escapeHtml(brandLabels[brand] || brand)}</span><b>${rows.length} ${rows.length === 1 ? "acción" : "acciones"}</b></div>
-        <div class="execution-category-list">${groups.map(([name, items]) => `<span>${escapeHtml(name)} <b>${items.length}</b></span>`).join("")}</div>
-        <p>${escapeHtml(campaigns.slice(0, 2).join(" · ") || "Sin campañas destacadas")}</p>
-      </article>`;
-    }).join("") || '<article class="crm-campaign-empty">Sin acciones por marca.</article>';
+      });
+      return map;
+    }, new Map()).entries()).sort((a, b) => b[1].length - a[1].length);
+    const maxGroup = Math.max(...grouped.map(([, rows]) => rows.length), 1);
+    const channelCount = uniqueTexts(cleanData.flatMap(row => String(pick(row, "canales", "canal") || "").split(/[,;+]/))).length;
+    const heroCampaigns = cleanData.map(row => pick(row, "titulo", "título", "campana", "campaña")).filter(Boolean).slice(0, 3);
+    container.innerHTML = cleanData.length ? `
+      <div class="execution-overview">
+        <article><span>Acciones activas</span><strong>${displayNumber(cleanData.length)}</strong><small>${brands.length} marcas impactadas</small></article>
+        <article><span>Frentes</span><strong>${displayNumber(grouped.length)}</strong><small>${displayNumber(channelCount)} canales reportados</small></article>
+        <article class="execution-overview-wide"><span>Campañas clave</span><strong>${escapeHtml(heroCampaigns.join(" · ") || "Sin campañas destacadas")}</strong></article>
+      </div>
+      <div class="execution-lanes">
+        ${grouped.map(([group, rows]) => `<div class="execution-lane"><div><span>${escapeHtml(group)}</span><b>${rows.length}</b></div><i><em style="width:${Math.max(8, rows.length / maxGroup * 100)}%"></em></i><small>${uniqueTexts(rows.map(row => brandLabels[brandKey(pick(row, "marca"))] || pick(row, "marca"))).join(" · ")}</small></div>`).join("")}
+      </div>
+      <div class="execution-brand-strip">
+        ${brands.map(brand => {
+          const rows = cleanData.filter(row => brandKey(pick(row, "marca")) === brand);
+          const groups = uniqueTexts(rows.flatMap(executionGroups));
+          const campaign = rows.map(row => pick(row, "titulo", "título", "campana", "campaña")).filter(Boolean)[0] || "Sin campaña destacada";
+          return `<article class="execution-summary-card" data-brand="${brand}">
+            <div class="execution-summary-head"><span>${escapeHtml(brandLabels[brand] || brand)}</span><b>${rows.length}</b></div>
+            <p>${escapeHtml(campaign)}</p>
+            <small>${escapeHtml(groups.join(" · "))}</small>
+          </article>`;
+        }).join("")}
+      </div>` : '<article class="crm-campaign-empty">Sin acciones por marca.</article>';
     const count = document.querySelector("#executionSummaryCount");
-    if (count) count.textContent = `${data.length} ${data.length === 1 ? "acción" : "acciones"}`;
+    if (count) count.textContent = `${cleanData.length} ${cleanData.length === 1 ? "acción" : "acciones"}`;
+  }
+
+  function splitDigitalStores(value) {
+    return String(value ?? "")
+      .split(/[,;|/]+/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  function relatedStoreRows(row) {
+    const targets = splitDigitalStores(row.store || row.stores);
+    const sales = window.reportStoreData || [];
+    const traffic = window.reportTrafficStores || [];
+    const matches = targets.map(target => {
+      const normalized = normalizeStore(target);
+      const salesMatch = sales.find(item => {
+        const candidate = normalizeStore(item.store);
+        return candidate === normalized || candidate.includes(normalized) || normalized.includes(candidate);
+      });
+      const trafficMatch = traffic.find(item => {
+        const candidate = normalizeStore(item.store);
+        return candidate === normalized || candidate.includes(normalized) || normalized.includes(candidate);
+      });
+      return {target, sales:salesMatch, traffic:trafficMatch};
+    });
+    const uniqueSales = Array.from(new Map(matches.filter(item => item.sales).map(item => [normalizeStore(item.sales.store), item.sales])).values());
+    const uniqueTraffic = Array.from(new Map(matches.filter(item => item.traffic).map(item => [item.traffic.key || normalizeStore(item.traffic.store), item.traffic])).values());
+    const salesNow = uniqueSales.reduce((total, item) => total + number(item.salesNow), 0);
+    const salesPrev = uniqueSales.reduce((total, item) => total + number(item.salesPrev), 0);
+    const salesGoal = uniqueSales.reduce((total, item) => total + number(item.salesGoal), 0);
+    const trafficNow = uniqueSales.reduce((total, item) => total + number(item.trafficNow), 0);
+    const trafficPrev = uniqueSales.reduce((total, item) => total + number(item.trafficPrev), 0);
+    const exterior = uniqueTraffic.reduce((total, item) => total + number(item.exterior), 0);
+    const interior = uniqueTraffic.reduce((total, item) => total + number(item.individual), 0);
+    return {
+      requested: targets.length,
+      matchedSales: uniqueSales.length,
+      matchedTraffic: uniqueTraffic.length,
+      salesNow,
+      salesPrev,
+      salesVariation: salesPrev ? salesNow / salesPrev - 1 : 0,
+      salesGoal,
+      salesCompliance: salesGoal ? salesNow / salesGoal : 0,
+      trafficNow,
+      trafficPrev,
+      trafficVariation: trafficPrev ? trafficNow / trafficPrev - 1 : 0,
+      exterior,
+      interior,
+      capture: exterior ? interior / exterior : 0
+    };
+  }
+
+  function withDigitalImpact(row) {
+    return {...row, storeImpact: relatedStoreRows(row)};
+  }
+
+  function aggregateDigitalImpact(rows) {
+    const storeNames = Array.from(new Set(rows.flatMap(row => splitDigitalStores(row.store || row.stores)).map(normalizeStore).filter(Boolean)));
+    return relatedStoreRows({store: storeNames.join(",")});
+  }
+
+  function digitalPlatformName(row) {
+    return row.platform || row.portal || row.channel || "Sin plataforma";
+  }
+
+  function platformSourceLabel(row) {
+    return row.sourceType === "platform" ? "Plataforma externa" : "Meta / pauta digital";
+  }
+
+  function optionalMoney(value) {
+    return value === "" || value === undefined || value === null ? "Sin dato" : displayMoney(number(value));
+  }
+
+  function optionalNumber(value) {
+    return value === "" || value === undefined || value === null ? "Sin dato" : displayNumber(number(value));
+  }
+
+  function deltaPill(value) {
+    const numeric = number(value);
+    return `<span class="delta-pill ${numeric >= 0 ? "positive" : "negative"}">${numeric >= 0 ? "+" : ""}${displayPercent(numeric)}</span>`;
+  }
+
+  function sourceClass(row) {
+    return row.sourceType === "platform" ? "platform" : "meta";
   }
 
   function renderDigitalPauta(data) {
     const container = document.querySelector("#digitalPautaRows");
     if (!container) return;
-    const digitalRows = Array.isArray(data) ? data : [];
+    const digitalRows = (Array.isArray(data) ? data : []).map(withDigitalImpact);
     const finite = value => Number.isFinite(number(value)) ? number(value) : 0;
     const sum = field => digitalRows.reduce((total, row) => total + finite(row[field]), 0);
     const totalSpend = sum("spend");
@@ -1233,64 +1362,79 @@
     const avgCpc = totalClicks ? totalSpend / totalClicks : 0;
     const roas = totalSpend ? totalRevenue / totalSpend : 0;
     const budgetUse = totalBudget ? totalSpend / totalBudget : 0;
-    const best = digitalRows.slice().sort((a, b) => finite(b.revenue) - finite(a.revenue) || finite(b.results) - finite(a.results))[0];
+    const totalContracted = sum("contracted");
+    const totalDelivered = sum("delivered");
+    const deliveryRate = totalContracted ? totalDelivered / totalContracted : 0;
+    const totalImpact = aggregateDigitalImpact(digitalRows);
+    const impactedSales = finite(totalImpact.salesNow);
+    const impactedExterior = finite(totalImpact.exterior);
+    const impactedInterior = finite(totalImpact.interior);
+    const impactedCapture = impactedExterior ? impactedInterior / impactedExterior : 0;
+    const best = digitalRows.slice().sort((a, b) => finite(b.storeImpact?.salesNow) - finite(a.storeImpact?.salesNow) || finite(b.delivered) - finite(a.delivered) || finite(b.results) - finite(a.results))[0];
     const byPortal = Array.from(digitalRows.reduce((map, row) => {
-      const portal = row.portal || "Sin portal";
-      if (!map.has(portal)) map.set(portal, {portal, spend:0, results:0, clicks:0});
+      const portal = digitalPlatformName(row);
+      if (!map.has(portal)) map.set(portal, {portal, sourceType:row.sourceType || "meta", rows:[], hasSpend:false, spend:0, budget:0, results:0, clicks:0, impressions:0, contracted:0, delivered:0});
       const current = map.get(portal);
+      current.rows.push(row);
+      if (row.spend !== "" && row.spend !== undefined && row.spend !== null) current.hasSpend = true;
       current.spend += finite(row.spend);
+      current.budget += finite(row.budget);
       current.results += finite(row.results);
       current.clicks += finite(row.clicks);
+      current.impressions += finite(row.impressions);
+      current.contracted += finite(row.contracted);
+      current.delivered += finite(row.delivered);
       return map;
-    }, new Map()).values());
+    }, new Map()).values()).map(item => ({...item, impact:aggregateDigitalImpact(item.rows)}));
     const maxPortalSpend = Math.max(...byPortal.map(item => item.spend), 1);
     if (!digitalRows.length) {
-      container.innerHTML = '<article class="crm-campaign-empty">Sin pauta digital reportada para la semana. Carga el Excel con la pestaña "Pauta Digital".</article>';
+      container.innerHTML = '<article class="crm-campaign-empty">Sin pauta digital reportada para la semana. Carga el Excel con las pestañas "Pauta Digital Meta" y/o "Pauta Digital Plataformas".</article>';
       const count = document.querySelector("#digitalPautaCount");
       if (count) count.textContent = "Sin datos";
       return;
     }
     container.innerHTML = `
       <div class="digital-pauta-kpis">
-        <article><span>Importe gastado</span><strong>${displayMoney(totalSpend)}</strong><small>${displayPercent(budgetUse)} del presupuesto cargado</small></article>
-        <article><span>Alcance</span><strong>${displayNumber(totalReach)}</strong><small>${displayNumber(totalImpressions)} impresiones</small></article>
-        <article><span>Clics / CPC</span><strong>${displayNumber(totalClicks)}</strong><small>${displayMoney(avgCpc)} por clic</small></article>
-        <article><span>Compras / ROAS</span><strong>${displayNumber(totalPurchases)}</strong><small>${roas ? `${roas.toLocaleString("es-CO", {maximumFractionDigits:1})}x` : "Sin conversión"} · ${displayMoney(totalRevenue)}</small></article>
+        <article><span>Consumo ejecutado</span><strong>${displayMoney(totalSpend)}</strong><small>${displayPercent(budgetUse)} del presupuesto total ${displayMoney(totalBudget)}</small></article>
+        <article><span>Entrega contratada</span><strong>${displayPercent(deliveryRate)}</strong><small>${displayNumber(totalDelivered)} / ${displayNumber(totalContracted)} entregado</small></article>
+        <article><span>Alcance e impresiones</span><strong>${displayNumber(totalReach)}</strong><small>${displayNumber(totalImpressions)} impresiones</small></article>
+        <article><span>Ventas tiendas impactadas</span><strong>${displayMoney(impactedSales)}</strong><small>${displayNumber(impactedInterior)} visitas · ${impactedCapture ? displayPercent(impactedCapture) : "sin captura"}</small></article>
       </div>
-      <div class="digital-pauta-split">
-        <article class="digital-pauta-summary">
-          <h4>Lectura de eficiencia</h4>
-          <div class="digital-pauta-bars">
-            ${byPortal.map(item => `<div class="digital-pauta-bar"><div><span>${escapeHtml(item.portal)}</span><b>${displayMoney(item.spend)}</b></div><i><em style="width:${Math.max(4, item.spend / maxPortalSpend * 100)}%"></em></i><small>${displayNumber(item.results)} resultados · ${displayNumber(item.clicks)} clics</small></div>`).join("")}
+      <div class="digital-platform-board">
+        ${byPortal.map(item => `<article class="digital-platform-row ${sourceClass(item)}">
+          <div class="platform-main">
+            <span>${escapeHtml(item.sourceType === "platform" ? "Plataforma externa" : "Meta / pauta digital")}</span>
+            <strong>${escapeHtml(item.portal)}</strong>
+            <small>${item.hasSpend ? `${displayMoney(item.spend)} consumo · ${displayPercent(item.budget ? item.spend / item.budget : 0)} presupuesto` : "Sin consumo reportado"}</small>
           </div>
-        </article>
-        <article class="digital-pauta-summary">
-          <h4>Campaña destacada</h4>
-          <div class="commercial-brand-main"><strong>${escapeHtml(best?.store || "Sin dato")}</strong><span>${escapeHtml(best?.campaign || "Campaña digital")}</span></div>
-          <div class="commercial-brand-metrics">
-            <div><span>Gasto</span><b>${displayMoney(finite(best?.spend))}</b></div>
-            <div><span>Resultados</span><b>${displayNumber(finite(best?.results))}</b></div>
-            <div><span>CPC</span><b>${displayMoney(finite(best?.cpc))}</b></div>
-            <div><span>Valor compras</span><b>${best?.revenue ? displayMoney(finite(best.revenue)) : "Sin dato"}</b></div>
+          <div class="platform-progress"><i><em style="width:${item.hasSpend ? Math.max(4, item.spend / maxPortalSpend * 100) : 4}%"></em></i><small>${item.sourceType === "platform" ? `${displayNumber(item.delivered)} entregado / ${displayNumber(item.contracted)} contratado` : `${displayNumber(item.impressions)} impresiones · ${displayNumber(item.clicks)} clics`}</small></div>
+          <div class="platform-impact">
+            <b>${displayMoney(finite(item.impact.salesNow))}</b>
+            <span>Ventas vs PY ${deltaPill(item.impact.salesVariation)}</span>
           </div>
-        </article>
+          <div class="platform-impact">
+            <b>${displayNumber(finite(item.impact.trafficNow))}</b>
+            <span>Tráfico vs PY ${deltaPill(item.impact.trafficVariation)}</span>
+          </div>
+        </article>`).join("")}
       </div>
       <div class="digital-pauta-grid">
-        ${digitalRows.map(row => `<article class="digital-pauta-card" data-brand="${escapeHtml(row.brand)}">
-          <div class="crm-campaign-top"><span>${escapeHtml(brandLabels[row.brand] || row.rawBrand || "Sin marca")}</span><b>${escapeHtml(row.portal || "Digital")}</b></div>
+        ${digitalRows.map(row => `<article class="digital-pauta-card ${row.sourceType === "platform" ? "digital-pauta-platform" : "digital-pauta-meta"}" data-brand="${escapeHtml(row.brand)}">
+          <div class="crm-campaign-top"><span>${escapeHtml(platformSourceLabel(row))}</span><b>${escapeHtml(digitalPlatformName(row))}</b></div>
           <h4>${escapeHtml(row.store || "Pauta digital")}</h4>
           <p>${escapeHtml(row.campaign || "Campaña importada desde la pestaña Pauta Digital.")}</p>
-          <div class="digital-pauta-metrics">
-            <div><span>Gasto</span><b>${displayMoney(finite(row.spend))}</b></div>
-            <div><span>Resultados</span><b>${displayNumber(finite(row.results))}</b></div>
-            <div><span>Alcance</span><b>${displayNumber(finite(row.reach))}</b></div>
-            <div><span>Clics</span><b>${displayNumber(finite(row.clicks))}</b></div>
-            <div><span>CPC</span><b>${displayMoney(finite(row.cpc))}</b></div>
-            <div><span>Compras</span><b>${row.purchases ? displayNumber(finite(row.purchases)) : "Sin dato"}</b></div>
+          <div class="digital-card-hero">
+            <div><span>Consumo</span><b>${optionalMoney(row.spend)}</b><small>${optionalMoney(row.budget)} presupuesto</small></div>
+            <div><span>${row.sourceType === "platform" ? "Entrega" : "Alcance"}</span><b>${row.sourceType === "platform" ? displayPercent(finite(row.deliveryCompliance)) : optionalNumber(row.reach)}</b><small>${row.sourceType === "platform" ? `${displayNumber(finite(row.delivered))} / ${displayNumber(finite(row.contracted))}` : `${displayNumber(finite(row.impressions))} impresiones`}</small></div>
+          </div>
+          <div class="digital-impact-strip">
+            <div><span>Ventas vs PY</span><b>${displayMoney(finite(row.storeImpact?.salesNow))}</b>${deltaPill(row.storeImpact?.salesVariation)}</div>
+            <div><span>Tráfico vs PY</span><b>${displayNumber(finite(row.storeImpact?.trafficNow))}</b>${deltaPill(row.storeImpact?.trafficVariation)}</div>
+            <div><span>Captura</span><b>${row.storeImpact?.capture ? displayPercent(row.storeImpact.capture) : "Sin dato"}</b></div>
           </div>
           <div class="digital-pauta-card-foot">
-            <span class="digital-pauta-status">${escapeHtml(row.status || "Sin estado")}</span>
-            <span>${escapeHtml(row.resultIndicator || "Resultado")}</span>
+            <span class="digital-pauta-status">${escapeHtml(row.status || row.buyType || "En ejecución")}</span>
+            <span>${escapeHtml(row.resultIndicator || (row.sourceType === "platform" ? "Entrega contratada" : "Resultado"))}</span>
             <span>${escapeHtml(row.start || "-")} - ${escapeHtml(row.end || "-")}</span>
           </div>
         </article>`).join("")}
@@ -1312,15 +1456,19 @@
       return {
         rawBrand,
         brand: brandKey(rawBrand) || "digital",
+        sourceType: "meta",
         store: pick(item, "tienda"),
+        stores: pick(item, "tienda"),
         channel: pick(item, "canal"),
         portal: pick(item, "portal"),
+        platform: pick(item, "portal", "canal"),
         campaign: pick(item, "nombre de la campana", "nombre de la campaña", "campana", "campaña"),
-        status: pick(item, "entrega de la campana", "entrega de la campaña", "estado"),
+        status: displayDate(pick(item, "entrega de la campana", "entrega de la campaña")) || pick(item, "estado"),
         results: pick(item, "resultados"),
         resultIndicator: pick(item, "indicador de resultado"),
         reach: pick(item, "alcance"),
         clicks: pick(item, "clics todos", "clicks todos", "clics"),
+        ctr: pick(item, "ctr"),
         cpm: pick(item, "cpm costo por mil impresiones cop", "cpm"),
         cpc: pick(item, "cpc costo por clic en el enlace cop", "cpc"),
         costPerResult: pick(item, "costo por resultados"),
@@ -1339,6 +1487,58 @@
     window.reportDigitalPautaData = data;
     renderDigitalPauta(data);
     return data.length;
+  }
+
+  function applyDigitalPlatforms(rows, existing = []) {
+    if (rows.length < 2) return existing;
+    const data = [...existing];
+    rows.forEach((row, index) => {
+      if (normalize(row[1]) !== "campana") return;
+      const block = rows.slice(index, index + 18);
+      const valueFor = label => {
+        const found = block.find(item => normalize(item[1]) === normalize(label));
+        return found ? found[2] : "";
+      };
+      const total = block.find(item => normalize(item[4]) === "total") || [];
+      const campaign = valueFor("campaña");
+      const stores = valueFor("tiendas");
+      const platform = valueFor("plataforma");
+      if (!campaign && !platform && !stores) return;
+      const budget = valueFor("inversion ordenada");
+      const spend = valueFor("consumo") || total[8];
+      const contracted = valueFor("contratado");
+      const delivered = valueFor("entregado") || total[5];
+      data.push({
+        rawBrand: "Levis",
+        brand: brandKey(stores || campaign || "Levis") || "levis",
+        sourceType: "platform",
+        store: stores,
+        stores,
+        channel: platform,
+        portal: platform,
+        platform,
+        campaign,
+        status: "En ejecución",
+        resultIndicator: "Entregado / contratado",
+        budget,
+        spend,
+        impressions: total[5] || delivered,
+        clicks: total[6],
+        ctr: total[7],
+        contracted,
+        delivered,
+        deliveryCompliance: valueFor("cumplimiento") || (number(contracted) ? number(delivered) / number(contracted) : 0),
+        frequency: valueFor("frecuencia"),
+        reach: valueFor("alcance"),
+        buyType: valueFor("tipo de compra"),
+        rate: valueFor("tarifa"),
+        start: displayDate(valueFor("fecha inicio")),
+        end: displayDate(valueFor("fecha final"))
+      });
+    });
+    window.reportDigitalPautaData = data;
+    renderDigitalPauta(data);
+    return data;
   }
   function actionCard(row, linkedEvidence = []) {
     const brand = brandKey(pick(row, "marca")) || "levis";
@@ -1422,8 +1622,12 @@
     const dailyTraffic = applyDailyTraffic(sheetByName(workbook, "Trafico Detallado"));
     const crm = applyCRM(sheetByName(workbook, "CRM"));
     const whatsapp = applyWhatsapp(sheetByName(workbook, "Whatsapp"));
-    const digitalPautaSheet = sheetByName(workbook, "Pauta Digital");
-    const digitalPauta = digitalPautaSheet.length ? applyDigitalPauta(digitalPautaSheet) : applyDigitalPauta([]);
+    const digitalPautaSheet = sheetByName(workbook, "Pauta Digital Meta").length
+      ? sheetByName(workbook, "Pauta Digital Meta")
+      : sheetByName(workbook, "Pauta Digital");
+    const digitalMetaCount = digitalPautaSheet.length ? applyDigitalPauta(digitalPautaSheet) : applyDigitalPauta([]);
+    const digitalPlatforms = applyDigitalPlatforms(sheetByName(workbook, "Pauta Digital Plataformas"), window.reportDigitalPautaData || []);
+    const digitalPauta = Array.isArray(digitalPlatforms) ? digitalPlatforms.length : digitalMetaCount;
     const actions = applyActions(sheetByName(workbook, "Acciones"), sheetByName(workbook, "Evidencias"));
     const budgetSheet = sheetByName(workbook, "Ejecucion Ppto").length
       ? sheetByName(workbook, "Ejecucion Ppto")
