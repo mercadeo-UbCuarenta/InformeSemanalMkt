@@ -37,6 +37,29 @@
   body.web-report[data-active-view="marcas"] .report-view.active-view{min-height:calc(100vh - 74px)!important}
 }
 
+/* Final weekly-history override */
+@media screen{
+  body.web-report[data-active-view="presupuesto"] .global-brand-filter,
+  body.web-report[data-active-view="marcas"] .global-brand-filter{display:block!important}
+  body.web-report[data-active-view="presupuesto"] .brand-filter-group,
+  body.web-report[data-active-view="marcas"] .brand-filter-group,
+  body.web-report[data-active-view="presupuesto"] .global-filter-inner>span,
+  body.web-report[data-active-view="marcas"] .global-filter-inner>span{display:none!important}
+  body.web-report[data-active-view="presupuesto"] #editableContent,
+  body.web-report[data-active-view="marcas"] #editableContent{padding-top:134px!important}
+  body.web-report[data-active-view="presupuesto"] .report-view.active-view,
+  body.web-report[data-active-view="marcas"] .report-view.active-view{min-height:calc(100vh - 134px)!important}
+  body.web-report[data-active-view="presupuesto"] .section.report-view.active-view,
+  body.web-report[data-active-view="marcas"] .section.report-view.active-view{padding-top:48px!important}
+}
+
+@media screen and (max-width:600px){
+  body.web-report[data-active-view="presupuesto"] #editableContent,
+  body.web-report[data-active-view="marcas"] #editableContent{padding-top:128px!important}
+  body.web-report[data-active-view="presupuesto"] .report-view.active-view,
+  body.web-report[data-active-view="marcas"] .report-view.active-view{min-height:calc(100vh - 128px)!important}
+}
+
 /* Web-style module navigation */
 @media screen{
   .web-report{background:linear-gradient(135deg,rgba(200,16,46,.18),transparent 28%),linear-gradient(315deg,rgba(14,132,181,.18),transparent 32%),#07070a;color:#f8f7f2}
@@ -119,6 +142,31 @@
   .web-report #editableContent{padding-top:134px!important}
   .web-report .report-view.active-view,
   .web-report .hero.report-view.active-view{min-height:calc(100vh - 134px)!important}
+}
+
+/* Weekly history selector */
+.week-filter-control{display:grid;gap:5px;min-width:190px;color:#777;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.week-filter-control select{height:36px;min-width:0;border:1px solid rgba(17,17,17,.14);border-radius:6px;background:#fff;color:#171717;padding:0 34px 0 10px;font-size:11px;font-weight:800;text-transform:none;letter-spacing:0;outline:none}
+.week-filter-control select:disabled{opacity:.62;cursor:not-allowed}
+.web-report .week-filter-control{color:#f5f2ea!important}
+.web-report .week-filter-control select{background:#1a1a20!important;color:#f0ede8!important;border-color:rgba(255,255,255,.14)!important}
+body.web-report[data-active-view="presupuesto"] .global-brand-filter,
+body.web-report[data-active-view="marcas"] .global-brand-filter{display:block!important}
+body.web-report[data-active-view="presupuesto"] .brand-filter-group,
+body.web-report[data-active-view="marcas"] .brand-filter-group,
+body.web-report[data-active-view="presupuesto"] .global-filter-inner>span,
+body.web-report[data-active-view="marcas"] .global-filter-inner>span{display:none!important}
+body.web-report[data-active-view="presupuesto"] #editableContent,
+body.web-report[data-active-view="marcas"] #editableContent{padding-top:134px!important}
+body.web-report[data-active-view="presupuesto"] .report-view.active-view,
+body.web-report[data-active-view="marcas"] .report-view.active-view{min-height:calc(100vh - 134px)!important}
+body.web-report[data-active-view="presupuesto"] .section.report-view.active-view,
+body.web-report[data-active-view="marcas"] .section.report-view.active-view{padding-top:48px!important}
+
+@media screen and (max-width:900px){
+  .global-filter-inner{height:auto;min-height:58px;padding:8px 0;align-items:flex-start;flex-direction:column}
+  .week-filter-control{width:100%}
+  .brand-filter-group{width:100%}
 }
 
 @media screen and (max-width:600px){
@@ -325,6 +373,7 @@ body{background:#090909;color:#f5f5f2}.topbar{background:rgba(8,8,8,.94);border-
 .digital-platform-board{display:grid;gap:8px}.digital-platform-row{display:grid;grid-template-columns:minmax(220px,1.2fr) minmax(180px,1fr) repeat(2,minmax(130px,.65fr));gap:1px;background:#343431;border-left:4px solid #2f6bff}.digital-platform-row.platform{border-left-color:#23d0b3}.digital-platform-row>div{background:#171716;padding:16px}.platform-main span,.platform-main small,.platform-progress small,.platform-impact span,.digital-card-hero span,.digital-card-hero small,.digital-impact-strip span{display:block;color:#8f8f8a;font-size:8px;text-transform:uppercase;letter-spacing:.07em}.platform-main strong{display:block;font-family:"Manrope";font-size:22px;margin:8px 0;color:#fff;overflow-wrap:anywhere}.platform-progress i{display:block;height:8px;background:#30302e;margin:8px 0;border-radius:1px}.platform-progress em{display:block;height:100%;background:linear-gradient(90deg,#2f6bff,#23d0b3)}.platform-impact b{display:block;font-family:"Manrope";font-size:22px;color:#fff;margin-bottom:8px;overflow-wrap:anywhere}.delta-pill,.platform-impact .delta-pill,.digital-impact-strip .delta-pill{display:inline-flex;width:max-content;max-width:100%;margin-top:5px;padding:3px 6px;border-radius:999px;font-size:8px;font-weight:900;line-height:1}.delta-pill.positive{background:#eafff5;color:#04734d}.delta-pill.negative{background:#ffe9e9;color:#aa2020}
 .digital-pauta-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.digital-pauta-card{background:#181818;border:1px solid #363633;border-top:3px solid var(--brand-accent);padding:16px;min-height:0;display:flex;flex-direction:column}.digital-pauta-card.digital-pauta-platform{border-top-color:#23d0b3}.digital-pauta-card.digital-pauta-meta{border-top-color:#2f6bff}.digital-pauta-card h4{font-family:"Manrope";font-size:15px;margin:12px 0 6px;line-height:1.2;overflow-wrap:anywhere}.digital-pauta-card p{color:#aaa;font-size:10px;line-height:1.4;margin:0 0 12px}.digital-card-hero{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#343431;margin:12px 0}.digital-card-hero div,.digital-impact-strip div{background:#151515;padding:12px}.digital-card-hero b{display:block;font-family:"Manrope";font-size:18px;margin:5px 0;color:#fff;overflow-wrap:anywhere}.digital-impact-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#343431;margin-top:auto}.digital-impact-strip b{display:block;font-family:"Manrope";font-size:16px;margin:4px 0;color:#fff;overflow-wrap:anywhere}.digital-pauta-card-foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.digital-pauta-card-foot span{border:1px solid #42423f;color:#ddd;padding:6px 7px;border-radius:3px;font-size:8px}.digital-pauta-status{background:#143128;color:#52d69c!important;border-color:#226448!important}
 .whatsapp-report{display:grid;gap:12px}.whatsapp-hero{display:grid;grid-template-columns:.85fr 1.15fr;gap:12px;align-items:stretch}.whatsapp-hero>div:first-child,.whatsapp-reading article,.whatsapp-block,.whatsapp-detail{background:#171716;border:1px solid #343431;padding:24px}.whatsapp-hero h3{font-family:"Manrope";font-size:clamp(28px,3.2vw,44px);line-height:1;margin:12px 0 14px}.whatsapp-hero p{color:#aaa;font-size:12px;line-height:1.5;margin:0}.whatsapp-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#343431;border:1px solid #343431}.whatsapp-kpis article{background:#111110;padding:20px;min-height:170px}.whatsapp-kpis span{display:block;color:#94948e;font-size:8px;text-transform:uppercase;font-weight:800;letter-spacing:.08em}.whatsapp-kpis strong{display:block;font-family:"Manrope";font-size:clamp(24px,2.6vw,36px);line-height:1;margin:18px 0 10px;overflow-wrap:anywhere}.whatsapp-kpis small{color:#858580;font-size:9px}.whatsapp-reading{display:grid;grid-template-columns:1fr 1fr;gap:12px}.whatsapp-reading h4,.whatsapp-block h4{font-family:"Manrope";font-size:20px;margin:0 0 18px}.whatsapp-reading ul,.whatsapp-methodology{margin:0;padding-left:18px;color:#c9c6bf;font-size:12px;line-height:1.55}.whatsapp-reading li+li,.whatsapp-methodology li+li{margin-top:8px}.whatsapp-analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.whatsapp-funnel,.whatsapp-store-bars,.whatsapp-signal-list{display:grid;gap:14px}.whatsapp-funnel-row>div,.whatsapp-store-bar>div,.whatsapp-signal-list div{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.whatsapp-funnel-row span,.whatsapp-store-bar span,.whatsapp-signal-list span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.whatsapp-funnel-row b,.whatsapp-store-bar b,.whatsapp-signal-list b{font-family:"Manrope";font-size:16px}.whatsapp-funnel-row i,.whatsapp-store-bar i,.whatsapp-signal-list i{display:block;height:5px;background:#30302e;margin:8px 0 6px}.whatsapp-funnel-row em,.whatsapp-store-bar em,.whatsapp-signal-list em{display:block;height:100%;background:#25d366}.whatsapp-funnel-row small,.whatsapp-store-bar small,.whatsapp-signal-list small{color:#858580;font-size:8px}.whatsapp-detail{padding:0}.whatsapp-detail summary{display:flex;align-items:center;justify-content:space-between;padding:22px 24px;cursor:pointer;list-style:none}.whatsapp-detail summary::-webkit-details-marker{display:none}.whatsapp-detail summary small,.whatsapp-detail summary strong{display:block}.whatsapp-detail summary small{color:#888;font-size:8px;text-transform:uppercase}.whatsapp-detail summary strong{font-family:"Manrope";font-size:18px;margin-top:4px}.whatsapp-detail summary>b{font-size:9px;background:#2a2a28;padding:8px 10px;border-radius:3px}.whatsapp-detail .table-wrap{padding:0 24px 22px;border:0}.whatsapp-detail table{min-width:980px}.whatsapp-detail td{font-size:9px}.whatsapp-methodology{border-top:1px solid #343431;padding:22px 24px 24px 42px}
+.whatsapp-campaign-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.whatsapp-campaign-card{background:#151514;border:1px solid #343431;border-top:4px solid var(--brand-accent,#25d366);padding:22px;display:grid;gap:16px}.whatsapp-campaign-head{display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:start}.whatsapp-campaign-head span{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--brand-accent,#25d366);letter-spacing:.08em}.whatsapp-campaign-head strong{font-family:"Manrope";font-size:24px;line-height:1.05}.whatsapp-campaign-head b{grid-row:1 / span 2;grid-column:2;font-family:"Manrope";font-size:34px;line-height:1;color:#fff}.whatsapp-campaign-volume{display:grid;gap:10px}.whatsapp-campaign-volume div{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.whatsapp-campaign-volume span,.whatsapp-mini-metrics span,.whatsapp-response-strip span{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#898984}.whatsapp-campaign-volume b,.whatsapp-mini-metrics b,.whatsapp-response-strip b{font-family:"Manrope";font-size:18px}.whatsapp-campaign-volume i{grid-column:1 / -1;height:7px;background:#2b2b29;display:block}.whatsapp-campaign-volume em{display:block;height:100%;background:#25d366}.whatsapp-campaign-volume em.volume{background:#00c2ff}.whatsapp-campaign-volume em.active{background:#25d366}.whatsapp-mini-metrics,.whatsapp-response-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#333330}.whatsapp-response-strip{grid-template-columns:repeat(3,minmax(0,1fr))}.whatsapp-mini-metrics div,.whatsapp-response-strip div{background:#10100f;padding:14px}.whatsapp-signal-chips{display:flex;gap:8px;flex-wrap:wrap}.whatsapp-signal-chips span{background:#242421;border:1px solid #383835;color:#dfddd6;font-size:10px;font-weight:800;text-transform:uppercase;padding:8px 10px}.whatsapp-signal-chips b{color:#25d366;margin-left:4px}.whatsapp-campaign-card>small{color:#888;font-size:9px;line-height:1.45}
 .commercial-brand-card{padding:22px;background:#151515}
 .commercial-brand-main{padding:20px 0 16px}
 .commercial-brand-main strong{display:block;font-family:"Manrope";font-size:30px;line-height:1.05}
@@ -334,8 +383,8 @@ body{background:#090909;color:#f5f5f2}.topbar{background:rgba(8,8,8,.94);border-
 .commercial-brand-metrics span,.commercial-brand-metrics small{display:block;color:#8f8f8a;font-size:7px;text-transform:uppercase;letter-spacing:.06em}
 .commercial-brand-metrics b{display:block;font-family:"Manrope";font-size:16px;margin-top:5px;overflow-wrap:anywhere}
 .commercial-brand-metrics small{margin-top:4px;text-transform:none;letter-spacing:0}
-@media(max-width:900px){.execution-overview,.execution-lanes,.execution-brand-strip,.digital-pauta-grid,.digital-pauta-kpis,.whatsapp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.execution-overview-wide{grid-column:span 2}.digital-platform-row{grid-template-columns:1fr 1fr}.whatsapp-hero,.whatsapp-reading,.whatsapp-analysis-grid{grid-template-columns:1fr}}
-@media(max-width:600px){.execution-summary-panel,.digital-pauta-panel,.whatsapp-report-panel{padding:20px}.execution-overview,.execution-lanes,.execution-brand-strip,.digital-pauta-grid,.digital-pauta-kpis,.digital-platform-row,.digital-card-hero,.digital-impact-strip,.whatsapp-kpis{grid-template-columns:1fr}.execution-overview-wide{grid-column:auto}.commercial-brand-metrics{grid-template-columns:1fr}.whatsapp-hero>div:first-child,.whatsapp-reading article,.whatsapp-block{padding:20px}}
+@media(max-width:900px){.execution-overview,.execution-lanes,.execution-brand-strip,.digital-pauta-grid,.digital-pauta-kpis,.whatsapp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.execution-overview-wide{grid-column:span 2}.digital-platform-row{grid-template-columns:1fr 1fr}.whatsapp-hero,.whatsapp-reading,.whatsapp-analysis-grid,.whatsapp-campaign-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.execution-summary-panel,.digital-pauta-panel,.whatsapp-report-panel{padding:20px}.execution-overview,.execution-lanes,.execution-brand-strip,.digital-pauta-grid,.digital-pauta-kpis,.digital-platform-row,.digital-card-hero,.digital-impact-strip,.whatsapp-kpis,.whatsapp-mini-metrics,.whatsapp-response-strip{grid-template-columns:1fr}.execution-overview-wide{grid-column:auto}.commercial-brand-metrics{grid-template-columns:1fr}.whatsapp-hero>div:first-child,.whatsapp-reading article,.whatsapp-block,.whatsapp-campaign-card{padding:20px}}
 @media print{.execution-summary-panel,.digital-pauta-panel,.whatsapp-report-panel{break-inside:avoid}.execution-lanes,.execution-brand-strip,.digital-pauta-grid{grid-template-columns:repeat(2,1fr)}.execution-overview,.digital-pauta-kpis,.whatsapp-kpis{grid-template-columns:repeat(4,1fr)}.digital-platform-row{grid-template-columns:1.2fr 1fr .8fr .8fr}.whatsapp-reading,.whatsapp-analysis-grid{grid-template-columns:1fr 1fr}}
 
 /* Infographic PDF export */

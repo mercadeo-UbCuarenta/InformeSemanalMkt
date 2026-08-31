@@ -29,8 +29,13 @@
 
   <aside class="global-brand-filter" aria-label="Filtro global de marca">
     <div class="global-filter-inner">
+      <label class="week-filter-control">Semana
+        <select id="weekFilter" aria-label="Seleccionar semana del informe">
+          <option value="">Semana actual</option>
+        </select>
+      </label>
       <span>Vista del informe</span>
-      <div class="filters">
+      <div class="filters brand-filter-group">
         <button type="button" class="global-filter active" data-global-brand="all">Todas</button>
         <button type="button" class="global-filter" data-global-brand="levis">Levi's Línea</button>
         <button type="button" class="global-filter" data-global-brand="levis-outlet">Levi's Outlet</button>

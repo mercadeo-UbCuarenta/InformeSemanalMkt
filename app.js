@@ -9,12 +9,15 @@ const galleryPicker = document.querySelector("#galleryPicker");
 const heroImagePicker = document.querySelector("#heroImagePicker");
 const toast = document.querySelector("#toast");
 const photoViewer = document.querySelector("#photoViewer");
+const weekFilter = document.querySelector("#weekFilter");
 const isLocalPreview = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
 const isPublished = !isLocalPreview;
 let editing = false;
 let activeImage = null;
 let activeGalleryCard = null;
 let saveTimer;
+let reportHistory = [];
+let activeWeekId = "";
 const actionFilters = {brand:"all"};
 const originalContent = content.innerHTML;
 const originalFooter = footer.innerHTML;
@@ -226,6 +229,102 @@ function saveReport(showConfirmation = true) {
   }
 }
 
+const normalizeHistoryText = value => String(value ?? "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/^-+|-+$/g, "");
+
+function payloadWeekLabel(payload = {}) {
+  return payload.runtime?.summaryData?.week
+    || payload.content?.match(/data-field="semana-informe"[^>]*>([^<]+)/)?.[1]?.trim()
+    || "Semana sin etiqueta";
+}
+
+function payloadPeriod(payload = {}) {
+  return payload.runtime?.summaryData?.period
+    || payload.content?.match(/data-field="periodo"[^>]*>([^<]+)/)?.[1]?.trim()
+    || "";
+}
+
+function weekIdFromPayload(payload = {}) {
+  const basis = `${payloadWeekLabel(payload)} ${payloadPeriod(payload)}`.trim() || payload.updatedAt || Date.now();
+  return normalizeHistoryText(basis) || `semana-${Date.now()}`;
+}
+
+function createWeekEntry(payload = {}) {
+  const entryPayload = {
+    version: payload.version || 6,
+    updatedAt: payload.updatedAt || new Date().toISOString(),
+    content: payload.content || "",
+    footer: payload.footer || "",
+    runtime: payload.runtime || {},
+    publication: payload.publication || {}
+  };
+  const id = payload.weekId || weekIdFromPayload(entryPayload);
+  return {
+    id,
+    label: payloadWeekLabel(entryPayload),
+    period: payloadPeriod(entryPayload),
+    updatedAt: entryPayload.updatedAt,
+    sourceExcel: entryPayload.publication?.sourceExcel || "",
+    payload: entryPayload
+  };
+}
+
+function payloadEntries(payload = {}) {
+  const source = Array.isArray(payload.history) ? payload.history : Array.isArray(payload.weeks) ? payload.weeks : [];
+  const entries = source.map(item => {
+    const entryPayload = item.payload || {
+      version: item.version || 6,
+      updatedAt: item.updatedAt,
+      content: item.content,
+      footer: item.footer,
+      runtime: item.runtime,
+      publication: item.publication
+    };
+    return {
+      ...createWeekEntry(entryPayload),
+      id: item.id || item.weekId || createWeekEntry(entryPayload).id,
+      label: item.label || item.week || payloadWeekLabel(entryPayload),
+      period: item.period || payloadPeriod(entryPayload),
+      updatedAt: item.updatedAt || entryPayload.updatedAt,
+      sourceExcel: item.sourceExcel || entryPayload.publication?.sourceExcel || ""
+    };
+  });
+  if (!entries.length && (payload.content || payload.runtime)) entries.push(createWeekEntry(payload));
+  const map = new Map();
+  entries.forEach(entry => map.set(entry.id, entry));
+  return [...map.values()].sort((a, b) => String(a.label).localeCompare(String(b.label), "es-CO", {numeric:true}));
+}
+
+function createHistoricalPayload(entries, currentId) {
+  const active = entries.find(entry => entry.id === currentId) || entries.at(-1);
+  const root = active?.payload || createReportPayload();
+  return {
+    ...root,
+    version: 7,
+    currentWeekId: active?.id || "",
+    history: entries,
+    publication: {
+      ...(root.publication || {}),
+      generatedFor: "GitHub Pages",
+      repository: "mercadeo-UbCuarenta/InformeSemanalMkt"
+    }
+  };
+}
+
+function updateWeekFilter() {
+  if (!weekFilter) return;
+  weekFilter.innerHTML = reportHistory.map(entry => {
+    const label = [entry.label, entry.period].filter(Boolean).join(" · ");
+    return `<option value="${entry.id}">${label}</option>`;
+  }).join("");
+  weekFilter.value = activeWeekId || reportHistory.at(-1)?.id || "";
+  weekFilter.disabled = reportHistory.length <= 1;
+}
+
 function createReportPayload() {
   return {
     version: 6,
@@ -241,6 +340,8 @@ function createReportPayload() {
       crmData: window.reportCRMData || [],
       whatsappData: window.reportWhatsappData || null,
       digitalPautaData: window.reportDigitalPautaData || [],
+      actionsData: window.reportActionsData || [],
+      evidenceData: window.reportEvidenceData || [],
       budgetData: window.reportBudgetData || [],
       selectedTrafficStore: window.selectedTrafficStore || "",
       globalBrand: actionFilters.brand
@@ -248,8 +349,14 @@ function createReportPayload() {
   };
 }
 
-function applyReportPayload(payload, label = "Último guardado") {
-  if (!payload?.runtime && !payload?.content) throw new Error("Formato inválido");
+function applyReportPayload(payload, label = "Último guardado", options = {}) {
+  const entries = payloadEntries(payload);
+  const selectedId = options.weekId || payload.currentWeekId || entries.at(-1)?.id || "";
+  const selected = entries.find(entry => entry.id === selectedId) || entries.at(-1);
+  if (!selected?.payload?.runtime && !selected?.payload?.content) throw new Error("Formato inválido");
+  reportHistory = entries;
+  activeWeekId = selected.id;
+  payload = selected.payload;
   const publishedContent = String(payload.content || "");
   const hasCurrentStructure = publishedContent.includes('id="storePerformanceRows"')
     && publishedContent.includes('id="whatsappReportRows"')
@@ -272,6 +379,7 @@ function applyReportPayload(payload, label = "Último guardado") {
     const stamp = new Date(payload.updatedAt).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"});
     document.querySelector("#saveStatus").textContent = `${label}: ${stamp}`;
   }
+  updateWeekFilter();
 }
 
 async function restoreReport() {
@@ -468,11 +576,10 @@ function exportReport() {
 function preparePublication() {
   saveReport(false);
   const payload = createReportPayload();
-  payload.publication = {
-    generatedFor: "GitHub Pages",
-    repository: "mercadeo-UbCuarenta/InformeSemanalMkt"
-  };
-  const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
+  const entry = createWeekEntry(payload);
+  const entries = reportHistory.filter(item => item.id !== entry.id);
+  entries.push(entry);
+  const blob = new Blob([JSON.stringify(createHistoricalPayload(entries, entry.id))], {type:"application/json"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = "datos-publicados.json";
@@ -486,14 +593,8 @@ function importReport(file) {
   reader.onload = () => {
     try {
       const payload = JSON.parse(reader.result);
-      if (!payload.content || Number(payload.version) < 5) throw new Error("Respaldo de una versión anterior");
-      content.innerHTML = payload.content;
-      footer.innerHTML = payload.footer || originalFooter;
-      ensureReportStructure();
-      ensureSalesUnitRows();
-      ensureDigitalPautaDashboard();
-      ensureViewNavigation();
-      ensureEditableWeek();
+      if (!payload.content && !payload.history?.length && !payload.weeks?.length || Number(payload.version) < 5) throw new Error("Respaldo de una versión anterior");
+      applyReportPayload(payload, "Respaldo importado");
       saveReport(false);
       setEditing(true);
       showToast("Respaldo importado");
@@ -510,6 +611,13 @@ document.querySelector("#saveReport").addEventListener("click", () => saveReport
 document.querySelector("#preparePublication").addEventListener("click", preparePublication);
 document.querySelector("#exportReport").addEventListener("click", exportReport);
 document.querySelector("#printReport").addEventListener("click", () => window.print());
+weekFilter?.addEventListener("change", event => {
+  const weekId = event.target.value;
+  if (!weekId || weekId === activeWeekId) return;
+  applyReportPayload({history:reportHistory, currentWeekId:weekId}, "Semana cargada", {weekId});
+  applyActionFilters();
+  showToast("Semana cargada");
+});
 document.querySelector("#importReport").addEventListener("change", event => {
   if (event.target.files[0]) importReport(event.target.files[0]);
   event.target.value = "";

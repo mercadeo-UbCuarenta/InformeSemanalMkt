@@ -945,8 +945,125 @@
     return result;
   };
 
+  function parseWhatsappRaw(sheet) {
+    const headers = sheet[0]?.map(header => normalize(header)) || [];
+    const hasRawHeaders = ["chatbot name", "conversation origin", "message count", "conversation status"]
+      .every(header => headers.includes(header));
+    if (!hasRawHeaders) return null;
+    const index = name => headers.indexOf(normalize(name));
+    const get = (row, name) => {
+      const column = index(name);
+      return column >= 0 ? row[column] : "";
+    };
+    const validRows = sheet.slice(1).filter(row => {
+      if (!row?.some(value => value !== "")) return false;
+      const id = String(get(row, "ID") || "");
+      return id.includes("-");
+    });
+    const campaigns = [
+      {
+        id:"desigual-fw26",
+        brand:"Desigual",
+        title:"New Collection FW26",
+        matcher:row => normalize(get(row, "Chatbot Name")).includes("desigual")
+      },
+      {
+        id:"wiseman-flash-sale",
+        brand:"Wiseman",
+        title:"FLASH SALE hasta -35%",
+        matcher:row => normalize(get(row, "Chatbot Name")).includes("wiseman")
+      }
+    ].map(campaign => {
+      const rows = validRows.filter(campaign.matcher);
+      const byBot = new Map();
+      const byOrigin = new Map();
+      const byStatus = new Map();
+      const byTag = new Map();
+      let activated = 0;
+      let assistantMessages = 0;
+      let employeeMessages = 0;
+      let totalMessages = 0;
+      let assistantResponse = 0;
+      let assistantResponseCount = 0;
+      let employeeResponse = 0;
+      let employeeResponseCount = 0;
+      let fallbacks = 0;
+      rows.forEach(row => {
+        const bot = String(get(row, "Chatbot Name") || "Sin bot").trim();
+        const origin = String(get(row, "Conversation Origin") || "Sin origen").trim();
+        const status = String(get(row, "Conversation Status") || "Sin estado").trim();
+        byBot.set(bot, (byBot.get(bot) || 0) + 1);
+        byOrigin.set(origin, (byOrigin.get(origin) || 0) + 1);
+        byStatus.set(status, (byStatus.get(status) || 0) + 1);
+        if (normalize(get(row, "Chatbot Activated")) === "true") activated += 1;
+        assistantMessages += number(get(row, "Assistant Message Count"));
+        employeeMessages += number(get(row, "Employee Message Count"));
+        totalMessages += number(get(row, "Message Count"));
+        const aiTime = number(get(row, "Avg Response Time Assistant (seconds)"));
+        const humanTime = number(get(row, "Avg Response Time Employee (seconds)"));
+        if (aiTime) {
+          assistantResponse += aiTime;
+          assistantResponseCount += 1;
+        }
+        if (humanTime) {
+          employeeResponse += humanTime;
+          employeeResponseCount += 1;
+        }
+        if (get(row, "AI Fallback At")) fallbacks += 1;
+        ["Tags", "Contact Status 1", "Contact Status 2", "Contact Status 3", "Contact Status 4"].forEach(field => {
+          String(get(row, field) || "").split(/[,;]/).map(item => item.trim()).filter(Boolean).forEach(tag => {
+            byTag.set(tag, (byTag.get(tag) || 0) + 1);
+          });
+        });
+      });
+      const sortEntries = map => [...map.entries()]
+        .map(([name, count]) => ({name, count}))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      return {
+        ...campaign,
+        conversations:rows.length,
+        origins:sortEntries(byOrigin),
+        statuses:sortEntries(byStatus),
+        bots:sortEntries(byBot),
+        tags:sortEntries(byTag).slice(0, 8),
+        activated,
+        activationRate:rows.length ? activated / rows.length : 0,
+        aiShare:rows.length ? (byStatus.get("AI") || 0) / rows.length : 0,
+        humanShare:rows.length ? (byStatus.get("HUMAN") || 0) / rows.length : 0,
+        assistantMessages,
+        employeeMessages,
+        avgMessages:rows.length ? totalMessages / rows.length : 0,
+        avgAssistantResponse:assistantResponseCount ? assistantResponse / assistantResponseCount : 0,
+        avgEmployeeResponse:employeeResponseCount ? employeeResponse / employeeResponseCount : 0,
+        fallbacks
+      };
+    }).filter(campaign => campaign.conversations);
+    if (!campaigns.length) return null;
+    const dates = validRows.map(row => String(get(row, "Created At") || "").slice(0, 10)).filter(Boolean).sort();
+    return {
+      type:"raw-campaigns",
+      title:"Campañas WhatsApp",
+      subtitle:dates.length ? `Conversaciones del ${displayDate(dates[0])} al ${displayDate(dates[dates.length - 1])}` : "Export crudo de conversaciones",
+      campaigns,
+      totalConversations:campaigns.reduce((total, campaign) => total + campaign.conversations, 0),
+      invalidRows:sheet.slice(1).filter(row => row?.some(value => value !== "") && !String(get(row, "ID") || "").includes("-")).length,
+      reading:[
+        "La lectura separa New Collection FW26 para Desigual y FLASH SALE hasta -35% para Wiseman según el bot/cuenta de atención.",
+        "El volumen corresponde principalmente a conversaciones transaccionales; las orgánicas se mantienen separadas como señal de demanda espontánea.",
+        "Los indicadores de IA y atención humana se presentan agregados para proteger datos personales."
+      ],
+      recommendations:[
+        "Cruzar los picos de conversación con ventas y tráfico por tienda para definir qué campaña generó mayor respuesta comercial.",
+        "Reforzar clasificación de tags de venta, asesoramiento y direcciones para mejorar el seguimiento de intención.",
+        "Mantener la separación de IA y humano para medir eficiencia operativa y oportunidades de escalamiento."
+      ]
+    };
+  }
+
   function parseWhatsappReport(rows) {
     const sheet = compactRows(rows);
+    const rawReport = parseWhatsappRaw(sheet);
+    if (rawReport) return rawReport;
     if (!sheet.length || !String(cellValue(sheet, 1, 1)).toLowerCase().includes("whatsapp")) return null;
     const stores = [];
     for (let row = 19; row <= 24; row++) {
@@ -1024,6 +1141,73 @@
       const count = document.querySelector("#whatsappReportCount");
       if (count) count.textContent = "Sin datos";
       return 0;
+    }
+    if (report.type === "raw-campaigns") {
+      const maxConversations = Math.max(...report.campaigns.map(item => item.conversations), 1);
+      const totalAi = report.campaigns.reduce((total, item) => total + Math.round(item.conversations * item.aiShare), 0);
+      const totalHuman = report.campaigns.reduce((total, item) => total + Math.round(item.conversations * item.humanShare), 0);
+      const topTags = uniqueTexts(report.campaigns.flatMap(item => item.tags.map(tag => tag.name))).slice(0, 6);
+      const secondsLabel = value => value ? `${displayNumber(Math.round(value / 60))} min` : "Sin dato";
+      const ratioBar = (value, colorClass = "") => `<i><em class="${colorClass}" style="width:${Math.max(4, Math.min(100, number(value) * 100))}%"></em></i>`;
+      container.innerHTML = `
+        <div class="whatsapp-hero whatsapp-raw-hero">
+          <div>
+            <span class="mini-label">Campañas especiales</span>
+            <h3>${escapeHtml(report.title)}</h3>
+            <p>${escapeHtml(report.subtitle)}${report.invalidRows ? ` · ${displayNumber(report.invalidRows)} fila excluida por formato inválido` : ""}</p>
+          </div>
+          <div class="whatsapp-kpis">
+            <article><span>Conversaciones</span><strong>${displayNumber(report.totalConversations)}</strong><small>${displayNumber(report.campaigns.length)} campañas activas</small></article>
+            <article><span>Gestión IA</span><strong>${displayNumber(totalAi)}</strong><small>${displayPercent(report.totalConversations ? totalAi / report.totalConversations : 0)} del total</small></article>
+            <article><span>Gestión humana</span><strong>${displayNumber(totalHuman)}</strong><small>${displayPercent(report.totalConversations ? totalHuman / report.totalConversations : 0)} del total</small></article>
+            <article><span>Señales top</span><strong>${displayNumber(topTags.length)}</strong><small>${escapeHtml(topTags.slice(0, 3).join(" · ") || "Sin tags")}</small></article>
+          </div>
+        </div>
+        <div class="whatsapp-campaign-grid">
+          ${report.campaigns.map(campaign => {
+            const transactional = campaign.origins.find(item => normalize(item.name) === "transactional")?.count || 0;
+            const organic = campaign.origins.find(item => normalize(item.name) === "organic")?.count || 0;
+            const ai = campaign.statuses.find(item => normalize(item.name) === "ai")?.count || 0;
+            const human = campaign.statuses.find(item => normalize(item.name) === "human")?.count || 0;
+            return `<article class="whatsapp-campaign-card" data-brand="${brandKey(campaign.brand)}">
+              <div class="whatsapp-campaign-head">
+                <span>${escapeHtml(campaign.brand)}</span>
+                <strong>${escapeHtml(campaign.title)}</strong>
+                <b>${displayNumber(campaign.conversations)}</b>
+              </div>
+              <div class="whatsapp-campaign-volume">
+                <div><span>Participación</span><b>${displayPercent(campaign.conversations / maxConversations)}</b>${ratioBar(campaign.conversations / maxConversations, "volume")}</div>
+                <div><span>Chatbot activo</span><b>${displayPercent(campaign.activationRate)}</b>${ratioBar(campaign.activationRate, "active")}</div>
+              </div>
+              <div class="whatsapp-mini-metrics">
+                <div><span>Transaccional</span><b>${displayNumber(transactional)}</b></div>
+                <div><span>Orgánico</span><b>${displayNumber(organic)}</b></div>
+                <div><span>IA</span><b>${displayNumber(ai)}</b></div>
+                <div><span>Humano</span><b>${displayNumber(human)}</b></div>
+              </div>
+              <div class="whatsapp-response-strip">
+                <div><span>Resp. IA</span><b>${secondsLabel(campaign.avgAssistantResponse)}</b></div>
+                <div><span>Resp. humano</span><b>${secondsLabel(campaign.avgEmployeeResponse)}</b></div>
+                <div><span>Fallbacks</span><b>${displayNumber(campaign.fallbacks)}</b></div>
+              </div>
+              <div class="whatsapp-signal-chips">${campaign.tags.length ? campaign.tags.slice(0, 5).map(tag => `<span>${escapeHtml(tag.name)} <b>${displayNumber(tag.count)}</b></span>`).join("") : "<span>Sin tags clasificados</span>"}</div>
+              <small>${escapeHtml(campaign.bots.map(item => `${item.name}: ${displayNumber(item.count)}`).join(" · "))}</small>
+            </article>`;
+          }).join("")}
+        </div>
+        <div class="whatsapp-reading">
+          <article>
+            <h4>Lectura principal</h4>
+            <ul>${report.reading.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </article>
+          <article>
+            <h4>Próximos pasos</h4>
+            <ul>${report.recommendations.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </article>
+        </div>`;
+      const count = document.querySelector("#whatsappReportCount");
+      if (count) count.textContent = `${displayNumber(report.totalConversations)} conversaciones · ${displayNumber(report.campaigns.length)} campañas`;
+      return report.campaigns.length;
     }
     const getMetric = (...names) => report.metrics.find(metric => names.some(name => normalize(metric.label).includes(normalize(name))))?.value || 0;
     const reached = getMetric("alcanzadas");
