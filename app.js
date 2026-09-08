@@ -166,6 +166,7 @@ const INLINE_LOGOS = {wisemanLight:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUg
 
 function normalizeLogoPaths(root = document) {
   root.querySelectorAll("img").forEach(image => {
+    if (image.dataset.driveId || image.closest(".evidence-image, .evidence-gallery")) return;
     const label = (image.alt || "").toLowerCase();
     const darkCard = Boolean(image.closest(".levis-card, .outlet-card, .wiseman-card"));
     if (label.includes("ub cuarenta") || label.includes("comercializadora ub")) image.src = INLINE_LOGOS.ubLight;
