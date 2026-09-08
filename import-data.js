@@ -65,6 +65,13 @@
       const date = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
       return date.toLocaleDateString("es-CO", {day:"2-digit", month:"short", year:"numeric", timeZone:"UTC"});
     }
+    const text = String(value ?? "").trim();
+    const monthMap = {ene:"01", feb:"02", mar:"03", abr:"04", may:"05", jun:"06", jul:"07", ago:"08", sep:"09", sept:"09", oct:"10", nov:"11", dic:"12"};
+    const match = text.toLowerCase().replace(".", "").match(/^(\d{1,2})-([a-zñ]+)-(\d{2,4})$/);
+    if (match && monthMap[match[2]]) {
+      const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+      return `${match[1].padStart(2, "0")}/${monthMap[match[2]]}/${year}`;
+    }
     return String(value ?? "-");
   };
   const parseCurrency = value => {
