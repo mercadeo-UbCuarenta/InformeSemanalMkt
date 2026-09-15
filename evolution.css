@@ -1,0 +1,45 @@
+.web-report .hero.denim-home.report-view.active-view{display:block!important;padding:0!important;min-height:0!important;background:#f4f6f7;color:#17191b;height:auto!important}
+.denim-home:before,.denim-home .hero-rings,.denim-home .hero-stat,.denim-home .brand-stack,.denim-home .scroll-hint{display:none!important}
+.denim-home .hero-grid{display:block;position:relative;width:100%;margin:0;min-height:360px;padding:64px max(24px,5%);isolation:isolate}
+.denim-home .hero-visual{position:absolute;inset:0;z-index:-1;height:auto!important;min-height:0!important;width:100%;border:0!important;border-radius:0!important;background-position:center 45%!important;background-size:cover!important;filter:none!important}
+.denim-home .hero-copy{max-width:740px;padding:0;position:relative;color:white;text-shadow:0 2px 10px #0009}
+.denim-home .hero-copy .eyebrow{color:#fff}
+.denim-home h1{font-family:Georgia,'Times New Roman',serif!important;font-size:64px!important;font-weight:400!important;line-height:1.08!important;letter-spacing:0!important;margin:12px 0 24px!important;color:#fff!important;text-transform:none!important}
+.denim-home .hero-period{font-size:17px;color:#fff;line-height:1.5;max-width:580px}
+.denim-home .hero-meta{flex-wrap:wrap}.denim-home .hero-meta span{background:#111b;border-color:#ffffff70;letter-spacing:0}
+.brand-evolution{position:relative;padding:30px 5% 48px;background:#f4f6f7;color:#202427}
+.evolution-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:20px}
+.evolution-heading p{font-size:12px;margin:0 0 4px;color:#5b6269}.evolution-heading h2{font-size:25px;margin:0;font-family:'Manrope',sans-serif;letter-spacing:0}.evolution-heading>span{font-size:12px;color:#59626a}
+.evolution-brands{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.evolution-brand{min-width:0;background:white;border:1px solid #d6dde2;border-radius:6px;overflow:hidden;border-top:3px solid #24736b}
+.evolution-brand[data-brand=levis]{border-top-color:#b8223a}.evolution-brand[data-brand=levis-outlet]{border-top-color:#3166a0}.evolution-brand[data-brand=desigual]{border-top-color:#c16a12}.evolution-brand[data-brand=digital]{border-top-color:#626c79}
+.evolution-brand h3{font-size:17px;padding:16px 18px;margin:0;font-family:'Manrope',sans-serif;letter-spacing:0}
+.evolution-table-wrap{overflow-x:auto}.evolution-brand table{width:100%;min-width:440px;border-collapse:collapse;table-layout:fixed;text-transform:none}
+.evolution-brand th,.evolution-brand td{padding:12px 9px;font-size:11px;letter-spacing:0;text-align:right;border-bottom:1px solid #e9edf0;white-space:normal;color:#30383e;background:transparent}
+.evolution-brand th:first-child{width:26%;text-align:left;padding-left:18px}.evolution-brand thead{background:#edf1f4}.evolution-brand thead th{font-weight:600;color:#5a646d}
+.evolution-brand td:last-child{background:#f0f6f5}.evolution-brand strong{font-size:13px;white-space:nowrap;font-weight:700}.evolution-brand strong.negative{color:#b12b41}
+.evolution-track{height:4px;background:#e8edf1;display:block;width:100%;margin-top:8px}.evolution-track i{display:block;height:100%;background:#3166a0}.evolution-sales .evolution-track i{background:#24736b}.evolution-capture .evolution-track i{background:#bc731c}.evolution-track i.negative{background:#c04156}
+.evolution-coverage,.evolution-note{font-size:11px;color:#68747d;line-height:1.5}.evolution-coverage{margin:12px 18px}.evolution-note{margin:18px 0 0}.metric-unavailable{font-size:11px;color:#888}
+.global-brand-filter .global-filter.active{color:#15191c!important;background:#f2f5f6!important}
+@media(max-width:1000px){.evolution-brands{grid-template-columns:1fr}}
+@media(max-width:600px){.denim-home .hero-grid{min-height:300px;padding:38px 22px}.denim-home h1{font-size:42px!important}.denim-home .hero-period{font-size:14px}.brand-evolution{padding:24px 16px}.evolution-heading{align-items:start;flex-direction:column}.evolution-brand table{min-width:440px}.evolution-heading h2{font-size:22px}}
+@media screen and (max-width:900px){
+  .web-report .topbar{height:110px!important;display:grid!important;grid-template-columns:1fr auto;grid-template-rows:52px 42px;padding:8px 16px!important;gap:0}
+  .web-report .topbar nav{display:flex!important;grid-column:1 / -1;grid-row:2;justify-content:space-between;gap:10px;width:100%;overflow:auto}
+  .web-report .topbar nav a{font-size:11px;white-space:nowrap;letter-spacing:0}
+  .web-report .edit-toggle{grid-column:2;grid-row:1}
+  .web-report .global-brand-filter{top:110px!important;height:112px!important;padding:8px 16px!important}
+  .web-report .global-filter-inner{display:flex!important;flex-direction:column!important;align-items:stretch!important;padding:0!important;gap:9px;height:auto!important;width:100%}
+  .web-report .global-filter-inner>span{display:none}
+  .web-report .week-filter-control{width:100%;max-width:none;min-width:0}
+  .web-report .brand-filter-group{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;min-height:36px;height:36px!important;gap:5px;margin:0;flex-shrink:0}
+  .web-report .brand-filter-group::-webkit-scrollbar{display:none}
+  .web-report .brand-filter-group button{flex:0 0 auto!important;display:block!important;height:30px;padding:6px 9px;font-size:10px}
+  .web-report #editableContent{padding-top:222px!important}
+  .evolution-brand table{min-width:0}
+  .evolution-brand th,.evolution-brand td{font-size:9px;padding:10px 4px}
+  .evolution-brand th:first-child{padding-left:10px;width:26%}
+  .evolution-brand strong{font-size:11px;white-space:normal}
+  body.web-report[data-active-view="presupuesto"] #editableContent,body.web-report[data-active-view="marcas"] #editableContent{padding-top:110px!important}
+}
+@media print{.hero.denim-home{display:block!important;height:auto!important;padding:0!important;background:white!important;break-after:auto!important}.denim-home .hero-grid{display:block!important;padding:12mm!important;min-height:65mm!important}.denim-home .hero-visual{background-image:url('assets/denim-cover.jpg')!important;height:100%!important}.denim-home h1{font-size:34pt!important}.brand-evolution{padding:8mm 0;background:white}.evolution-brands{grid-template-columns:1fr}.evolution-brand{break-inside:avoid}.evolution-brand table{min-width:0}.evolution-table-wrap{overflow:visible}.evolution-track{-webkit-print-color-adjust:exact;print-color-adjust:exact}}

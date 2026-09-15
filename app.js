@@ -463,10 +463,22 @@ function applyActionFilters() {
   document.querySelectorAll(".global-filter").forEach(button => {
     button.classList.toggle("active", button.dataset.globalBrand === actionFilters.brand);
   });
+  if (window.reportBrandFilter !== actionFilters.brand) {
+    const localBrand = document.querySelector("#trafficOverviewBrand");
+    const localStore = document.querySelector("#trafficOverviewStore");
+    if (localBrand) localBrand.value = "all";
+    if (localStore) localStore.value = "all";
+  }
   window.reportBrandFilter = actionFilters.brand;
+  window.ReportImporter?.renderStorePerformance?.();
   window.ReportImporter?.renderDailyTraffic?.();
   window.applyBrandSummaryFilter?.(actionFilters.brand);
   window.filterCRMByBrand?.(actionFilters.brand);
+  window.ReportEvolution?.render(reportHistory, activeWeekId, {
+    summaryData: window.reportSummaryData,
+    storeData: window.reportStoreData,
+    trafficStores: window.reportTrafficStores
+  }, actionFilters.brand);
 }
 
 function resetActionFilters() {

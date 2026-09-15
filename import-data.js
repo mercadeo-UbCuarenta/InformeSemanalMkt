@@ -452,7 +452,7 @@
       detail.dataset.brand = brand;
       detail.hidden = row.getAttribute("aria-expanded") !== "true";
       const body = stores.length ? `<div class="sales-unit-detail"><table>
-        <thead><tr><th>Tienda</th><th>Venta 2026</th><th>Venta PY</th><th>Crecimiento</th><th>Meta</th><th>Cump.</th><th>Conversión</th><th>ATV</th></tr></thead>
+        <thead><tr><th>Tienda</th><th>Venta 2026</th><th>Venta PY</th><th>Crecimiento</th><th>Meta</th><th>Cump.</th><th>Tráfico vs LY</th><th>Conversión</th><th>ATV</th></tr></thead>
         <tbody>${stores.map(store => `<tr>
           <td class="store-cell"><strong>${escapeHtml(store.store)}</strong><small>${escapeHtml(brandLabels[brand] || brand)}</small></td>
           <td>${displayMoney(number(store.salesNow))}</td>
@@ -460,6 +460,7 @@
           <td><span class="compliance-pill ${number(store.salesVar) >= 0 ? "met" : "missed"}"><i></i>${displayPercent(store.salesVar)}</span></td>
           <td>${displayMoney(number(store.salesGoal))}</td>
           <td><span class="compliance-pill ${number(store.salesCompliance) >= 1 ? "met" : "missed"}"><i></i>${store.salesCompliance !== "" && store.salesCompliance !== undefined ? displayPercent(store.salesCompliance) : "-"}</span></td>
+          <td>${number(store.trafficPrev) > 0 && store.trafficNow !== null && store.trafficNow !== undefined && store.trafficNow !== "" && store.trafficNow !== "-" ? `<span class="compliance-pill ${number(store.trafficNow) >= number(store.trafficPrev) ? "met" : "missed"}">${displayPercent(number(store.trafficNow) / number(store.trafficPrev) - 1)}</span>` : '<span class="metric-unavailable">Sin base LY</span>'}</td>
           <td>${store.conversion !== "" && store.conversion !== undefined ? displayPercent(store.conversion) : "-"}</td>
           <td>${displayMoney(number(store.ticket))}</td>
         </tr>`).join("")}</tbody>
@@ -618,11 +619,6 @@
     const selectedStore = document.querySelector("#trafficOverviewStore")?.value || "all";
     const stores = allStores.filter(item => (selectedBrand === "all" || item.brand === selectedBrand)
       && (selectedStore === "all" || item.key === selectedStore));
-    if (!allStores.length) {
-      const count = document.querySelector("#storeDetailCount");
-      if (count) count.textContent = "Sin información";
-      return;
-    }
     const totals = stores.reduce((acc, item) => {
       acc.exterior += number(item.exterior);
       acc.interior += number(item.individual);
@@ -697,12 +693,14 @@
     const storeSelect = document.querySelector("#trafficOverviewStore");
     if (!brandSelect || !storeSelect) return;
     const stores = window.reportTrafficStores || [];
-    const currentBrand = brandSelect.value || window.reportBrandFilter || "all";
+    const globalBrand = window.reportBrandFilter || "all";
+    const currentBrand = globalBrand !== "all" ? globalBrand : brandSelect.value || "all";
     const currentStore = storeSelect.value || "all";
-    const brands = Array.from(new Set(stores.map(item => item.brand).filter(Boolean)));
+    const brands = Array.from(new Set([...stores.map(item => item.brand).filter(Boolean), ...(globalBrand !== "all" ? [globalBrand] : [])]));
     brandSelect.innerHTML = '<option value="all">Todas</option>' + brands.map(brand =>
       `<option value="${escapeHtml(brand)}">${escapeHtml(brandLabels[brand] || brand)}</option>`).join("");
     brandSelect.value = brands.includes(currentBrand) ? currentBrand : "all";
+    brandSelect.disabled = globalBrand !== "all";
     const filtered = brandSelect.value === "all" ? stores : stores.filter(item => item.brand === brandSelect.value);
     storeSelect.innerHTML = '<option value="all">Todas</option>' + filtered.map(item =>
       `<option value="${escapeHtml(item.key)}">${escapeHtml(item.store)}</option>`).join("");
@@ -739,13 +737,14 @@
       return;
     }
     const sum = field => rows.reduce((total, item) => total + number(item[field]), 0);
-    const salesNow = sum("salesNow");
-    const salesPrev = sum("salesPrev");
-    const salesGoal = sum("salesGoal");
+    const summary = brand === "all" ? window.reportSummaryData : window.reportSummaryData?.brands?.find(item => item.brand === brand);
+    const salesNow = summary ? number(summary.salesWeek) : sum("salesNow");
+    const salesPrev = summary ? number(summary.salesPrevious) : sum("salesPrev");
+    const salesGoal = summary ? number(summary.salesGoal) : sum("salesGoal");
     const trafficNow = sum("trafficNow");
     const trafficGoal = sum("trafficGoal");
     const salesWeight = rows.reduce((total, item) => total + Math.max(number(item.salesNow), 0), 0);
-    const ticket = salesWeight
+    const ticket = summary ? number(summary.ticketAverage) : salesWeight
       ? rows.reduce((total, item) => total + number(item.ticket) * Math.max(number(item.salesNow), 0), 0) / salesWeight
       : 0;
     const variation = salesPrev ? salesNow / salesPrev - 1 : 0;
@@ -1481,7 +1480,9 @@
     const salesPrev = uniqueSales.reduce((total, item) => total + number(item.salesPrev), 0);
     const salesGoal = uniqueSales.reduce((total, item) => total + number(item.salesGoal), 0);
     const trafficNow = uniqueSales.reduce((total, item) => total + number(item.trafficNow), 0);
-    const trafficPrev = uniqueSales.reduce((total, item) => total + number(item.trafficPrev), 0);
+    const comparableTraffic = uniqueSales.filter(item => number(item.trafficPrev) > 0 && item.trafficNow !== null && item.trafficNow !== undefined && item.trafficNow !== "");
+    const trafficPrev = comparableTraffic.reduce((total, item) => total + number(item.trafficPrev), 0);
+    const comparableNow = comparableTraffic.reduce((total, item) => total + number(item.trafficNow), 0);
     const exterior = uniqueTraffic.reduce((total, item) => total + number(item.exterior), 0);
     const interior = uniqueTraffic.reduce((total, item) => total + number(item.individual), 0);
     return {
@@ -1495,7 +1496,7 @@
       salesCompliance: salesGoal ? salesNow / salesGoal : 0,
       trafficNow,
       trafficPrev,
-      trafficVariation: trafficPrev ? trafficNow / trafficPrev - 1 : 0,
+      trafficVariation: trafficPrev ? comparableNow / trafficPrev - 1 : null,
       exterior,
       interior,
       capture: exterior ? interior / exterior : 0
@@ -1528,6 +1529,7 @@
   }
 
   function deltaPill(value) {
+    if (value === null || value === undefined) return '<span class="delta-pill">Sin base PY</span>';
     const numeric = number(value);
     return `<span class="delta-pill ${numeric >= 0 ? "positive" : "negative"}">${numeric >= 0 ? "+" : ""}${displayPercent(numeric)}</span>`;
   }
