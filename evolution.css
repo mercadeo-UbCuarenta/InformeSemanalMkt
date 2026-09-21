@@ -21,6 +21,14 @@
 .evolution-track{height:4px;background:#e8edf1;display:block;width:100%;margin-top:8px}.evolution-track i{display:block;height:100%;background:#3166a0}.evolution-sales .evolution-track i{background:#24736b}.evolution-capture .evolution-track i{background:#bc731c}.evolution-track i.negative{background:#c04156}
 .evolution-coverage,.evolution-note{font-size:11px;color:#68747d;line-height:1.5}.evolution-coverage{margin:12px 18px}.evolution-note{margin:18px 0 0}.metric-unavailable{font-size:11px;color:#888}
 .global-brand-filter .global-filter.active{color:#15191c!important;background:#f2f5f6!important}
+.repurchase-strip{display:flex;align-items:center;gap:24px;margin:16px 0 24px;padding:14px 0;border-top:1px solid #3a4446;border-bottom:1px solid #3a4446;letter-spacing:0}
+.repurchase-strip h3{font-size:14px;margin:0;color:#edf2f2;white-space:nowrap}
+.repurchase-strip dl{display:flex;flex-wrap:wrap;gap:14px 28px;margin:0;flex:1}
+.repurchase-strip dl>div{min-width:100px;flex:1}
+.repurchase-strip dt{font-size:11px;color:#c5d2d3}
+.repurchase-strip dd{font-size:20px;font-weight:700;margin:3px 0 0;color:#32d2bf;font-variant-numeric:tabular-nums}
+@media print{.repurchase-strip h3,.repurchase-strip dt,.repurchase-strip dd{color:#111!important}}
+@media(max-width:600px){.repurchase-strip{align-items:flex-start;flex-direction:column;gap:12px}.repurchase-strip dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:12px}.repurchase-strip dd{font-size:18px}}
 @media(max-width:1000px){.evolution-brands{grid-template-columns:1fr}}
 @media(max-width:600px){.denim-home .hero-grid{min-height:300px;padding:38px 22px}.denim-home h1{font-size:42px!important}.denim-home .hero-period{font-size:14px}.brand-evolution{padding:24px 16px}.evolution-heading{align-items:start;flex-direction:column}.evolution-brand table{min-width:440px}.evolution-heading h2{font-size:22px}}
 @media screen and (max-width:900px){

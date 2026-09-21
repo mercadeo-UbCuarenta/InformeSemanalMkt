@@ -489,6 +489,14 @@
     }));
     const totalSales = salesSummaryMap.get("total");
     const totalTraffic = trafficSummaryMap.get("total");
+    window.reportSummaryData = window.reportSummaryData || {};
+    window.reportSummaryData.repurchaseByBrand = Object.fromEntries(
+      ["levis", "levis-outlet", "desigual", "wiseman", "digital"].map(key => {
+        const value = trafficSummaryMap.get(key)?.[6];
+        return [key, typeof value === "number" && Number.isFinite(value) ? value : null];
+      })
+    );
+    renderRepurchase(window.reportBrandFilter || "all");
     if (totalSales) {
       setText('[data-field="ventas-semana"]', displayMoney(number(totalSales[3])));
       setText('[data-field="variacion-compania"]', displayPercent(totalSales[4]));
@@ -727,7 +735,29 @@
     window.reportTrafficGoals = goals;
     return Object.keys(goals).length;
   }
+  function renderRepurchase(brand = "all") {
+    const anchor = document.querySelector("#resumen .kpi-grid");
+    if (!anchor) return;
+    let strip = document.querySelector("#repurchaseStrip");
+    if (!strip) {
+      strip = document.createElement("section");
+      strip.id = "repurchaseStrip";
+      strip.className = "repurchase-strip";
+      strip.setAttribute("aria-label", "Tasa de recompra por marca");
+      anchor.after(strip);
+    }
+    const values = window.reportSummaryData?.repurchaseByBrand || {};
+    const keys = ["levis", "levis-outlet", "desigual", "wiseman", "digital"].filter(key => brand === "all" || key === brand);
+    strip.innerHTML = `<h3>Tasa de recompra</h3><dl>${keys.map(key => {
+      const value = values[key];
+      const label = typeof value === "number" && Number.isFinite(value)
+        ? value.toLocaleString("es-CO", {style:"percent", minimumFractionDigits:2, maximumFractionDigits:2}) : "Sin dato";
+      return `<div data-brand="${key}"><dt>${escapeHtml(brandLabels[key] || key)}</dt><dd>${label}</dd></div>`;
+    }).join("")}</dl>`;
+  }
+
   function applyBrandSummaryFilter(brand = "all") {
+    renderRepurchase(brand);
     const source = window.reportStoreData || [];
     if (!source.length) return;
     const rows = brand === "all" ? source : source.filter(item => item.brand === brand);
@@ -741,8 +771,9 @@
     const salesNow = summary ? number(summary.salesWeek) : sum("salesNow");
     const salesPrev = summary ? number(summary.salesPrevious) : sum("salesPrev");
     const salesGoal = summary ? number(summary.salesGoal) : sum("salesGoal");
-    const trafficNow = sum("trafficNow");
-    const trafficGoal = sum("trafficGoal");
+    const weeklySummary = brand === "all" && summary?.trafficBasis === "weekly";
+    const trafficNow = weeklySummary ? number(summary.trafficWeek) : sum("trafficNow");
+    const trafficGoal = weeklySummary ? number(summary.trafficGoal) : sum("trafficGoal");
     const salesWeight = rows.reduce((total, item) => total + Math.max(number(item.salesNow), 0), 0);
     const ticket = summary ? number(summary.ticketAverage) : salesWeight
       ? rows.reduce((total, item) => total + number(item.ticket) * Math.max(number(item.salesNow), 0), 0) / salesWeight
@@ -860,6 +891,7 @@
   function renderSummaryData(summary = {}) {
     if (!summary || typeof summary !== "object") return;
     window.reportSummaryData = summary;
+    renderRepurchase(window.reportBrandFilter || "all");
     setText('[data-field="periodo"]', summary.period);
     setText('[data-field="semana-informe"]', summary.week);
     setText('[data-field="variacion-compania"]', displayPercent(summary.companyVariation));
@@ -899,7 +931,7 @@
         const ticket = focus.querySelector('[data-metric="ticket-promedio"]');
         if (ticket) ticket.textContent = displayMoney(number(item.ticketAverage));
         const repurchase = focus.querySelector('[data-metric="tasa-recompra"]');
-        if (repurchase && item.conversion !== undefined && item.conversion !== null) repurchase.textContent = displayPercent(item.conversion);
+        if (repurchase) repurchase.textContent = typeof summary.repurchaseByBrand?.[key] === "number" ? displayPercent(summary.repurchaseByBrand[key]) : "Sin dato";
       }
       const analysisVariation = document.querySelector(`.brand-analysis [data-brand="${key}"] [data-metric="variacion"]`);
       if (analysisVariation && item.salesVariation !== undefined && item.salesVariation !== null) {
@@ -1153,19 +1185,19 @@
       const totalAi = report.campaigns.reduce((total, item) => total + Math.round(item.conversations * item.aiShare), 0);
       const totalHuman = report.campaigns.reduce((total, item) => total + Math.round(item.conversations * item.humanShare), 0);
       const topTags = uniqueTexts(report.campaigns.flatMap(item => item.tags.map(tag => tag.name))).slice(0, 6);
-      const secondsLabel = value => value ? `${displayNumber(Math.round(value / 60))} min` : "Sin dato";
+      const secondsLabel = value => value ? (value < 60 ? `${displayNumber(Math.round(value))} s` : `${displayNumber(Math.round(value / 60))} min`) : "Sin dato";
       const ratioBar = (value, colorClass = "") => `<i><em class="${colorClass}" style="width:${Math.max(4, Math.min(100, number(value) * 100))}%"></em></i>`;
       container.innerHTML = `
         <div class="whatsapp-hero whatsapp-raw-hero">
           <div>
-            <span class="mini-label">Campañas especiales</span>
+            <span class="mini-label">${report.aggregateOnly ? "Registros por origen" : "Campañas especiales"}</span>
             <h3>${escapeHtml(report.title)}</h3>
             <p>${escapeHtml(report.subtitle)}${report.invalidRows ? ` · ${displayNumber(report.invalidRows)} fila excluida por formato inválido` : ""}</p>
           </div>
           <div class="whatsapp-kpis">
-            <article><span>Conversaciones</span><strong>${displayNumber(report.totalConversations)}</strong><small>${displayNumber(report.campaigns.length)} campañas activas</small></article>
-            <article><span>Gestión IA</span><strong>${displayNumber(totalAi)}</strong><small>${displayPercent(report.totalConversations ? totalAi / report.totalConversations : 0)} del total</small></article>
-            <article><span>Gestión humana</span><strong>${displayNumber(totalHuman)}</strong><small>${displayPercent(report.totalConversations ? totalHuman / report.totalConversations : 0)} del total</small></article>
+            <article><span>${report.aggregateOnly ? "Registros únicos" : "Conversaciones"}</span><strong>${displayNumber(report.totalConversations)}</strong><small>${displayNumber(report.campaigns.length)} ${report.aggregateOnly ? "marcas reportadas" : "campañas activas"}</small></article>
+            <article><span>${report.aggregateOnly ? "Estado IA" : "Gestión IA"}</span><strong>${displayNumber(totalAi)}</strong><small>${displayPercent(report.totalConversations ? totalAi / report.totalConversations : 0)} del total</small></article>
+            <article><span>${report.aggregateOnly ? "Estado humano" : "Gestión humana"}</span><strong>${displayNumber(totalHuman)}</strong><small>${displayPercent(report.totalConversations ? totalHuman / report.totalConversations : 0)} del total</small></article>
             <article><span>Señales top</span><strong>${displayNumber(topTags.length)}</strong><small>${escapeHtml(topTags.slice(0, 3).join(" · ") || "Sin tags")}</small></article>
           </div>
         </div>
@@ -1212,7 +1244,7 @@
           </article>
         </div>`;
       const count = document.querySelector("#whatsappReportCount");
-      if (count) count.textContent = `${displayNumber(report.totalConversations)} conversaciones · ${displayNumber(report.campaigns.length)} campañas`;
+      if (count) count.textContent = report.aggregateOnly ? `${displayNumber(report.totalConversations)} registros por origen` : `${displayNumber(report.totalConversations)} conversaciones · ${displayNumber(report.campaigns.length)} campañas`;
       return report.campaigns.length;
     }
     const getMetric = (...names) => report.metrics.find(metric => names.some(name => normalize(metric.label).includes(normalize(name))))?.value || 0;
