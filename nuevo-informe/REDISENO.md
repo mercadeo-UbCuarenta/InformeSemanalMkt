@@ -21,3 +21,5 @@
 - Los textos que ve Gerencia no mencionan herramientas ni procesos internos (Asana, Woowup, Looker, Mahalo, Shopify, Excel, "tarea", "segmento #", "LY"). Se describe qué muestra cada módulo en lenguaje de negocio ("Promociones y dinámicas comerciales vigentes en las tiendas", "año anterior", "corte anterior").
 - Plantilla maestra del rediseño: template_v2 (scratchpad de la sesión; se subirá al repo como `nuevo-informe/informe_template.html`).
 - Acceso de escritura de Claude al repo GitHub mercadeo-UbCuarenta/InformeSemanalMkt: habilitado el 24 oct.
+- Borrador guardado en el repo, rama `rediseno-fury` (no publicada): `nuevo-informe/informe_template.html` (plantilla maestra), `nuevo-informe/datos_10.3_borrador.json` (paquete de datos de prueba) y `nuevo-informe/REDISENO.md`. La rama main es lo que ve Gerencia (GitHub Pages).
+- Siguiente paso: traer del PC (C:\Users\UB40\Documents\Informe Semanal\nuevo-informe) los scripts de armado de datos para que Fury construya el informe cada lunes en la nube.
