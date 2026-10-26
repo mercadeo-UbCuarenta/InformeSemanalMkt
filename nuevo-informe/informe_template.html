@@ -580,8 +580,8 @@ function crm(){const r=crmResumen(),d=crmDetalle();return r?r+`<details class="c
 
 /* ---------- Presupuesto ---------- */
 function presupuesto(){
-  if(st.marca==='digital')return emptyBox('Sin gasto asignado al canal digital','La ejecución contable viene por marca (Levi\'s, Desigual, Wiseman y Otros).');
-  const bm=st.marca==='todas'?null:(st.marca==='levis'||st.marca==='levis-outlet')?"Levi's":brandOf(st.marca).n;
+  if(st.marca==='digital')return emptyBox('Sin gasto asignado al canal digital','La ejecución contable viene por marca (Levi\'s Línea, Levi\'s Outlet, Desigual, Wiseman y Otros).');
+  const bm=st.marca==='todas'?null:st.marca==='levis'?"Levi's":st.marca==='levis-outlet'?"Levi's Outlet":brandOf(st.marca).n;
   const rows=BUD.filter(r=>!bm||r[1]===bm),tot=rows.reduce((a,r)=>a+r[5],0);
   if(!rows.length)return emptyBox('Sin movimientos','');
   const last=rows.reduce((a,r)=>r[0]>a?r[0]:a,''),first=rows.reduce((a,r)=>r[0]<a?r[0]:a,'9');
