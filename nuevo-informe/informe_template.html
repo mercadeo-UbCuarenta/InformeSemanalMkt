@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Informe Semanal (borrador)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#0e1630;--muted:#5d6688;--line:#eef0f6;--bg:#f6f7fb;--card:#fff;--up:#0f8a52;--dn:#d1263a;
+  --h1:#0b1233;--h2:#14204f;--h3:#2b3d8f;--acc:#ff5a6a;--c:#7b8cff}
+body{font-family:Sora,system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.num{font-variant-numeric:tabular-nums}
+.crm-execution{margin-top:24px;padding:18px 0;border-top:3px solid #2979d4;min-width:0}
+.crm-execution h3{font-size:16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.crm-execution h3 span,.crm-execution th small{font-size:11px;color:var(--muted);font-weight:400}
+.crm-execution .traffic-table{min-width:920px}
+.crm-execution th:first-child{min-width:220px;max-width:340px}
+.crm-execution th small,.crm-name{display:block;white-space:normal;overflow-wrap:anywhere;margin-top:5px}
+.crm-channel{font-size:11px;font-weight:600;display:inline-block;border-radius:4px;padding:3px 7px}
+.crm-channel.email{background:#e7effb;color:#2159a1}.crm-channel.sms{background:#f9e8ed;color:#9b2855}.crm-channel.wa{background:#e0f3e9;color:#176d49}
+.traffic-results{margin-top:28px;padding-top:20px;border-top:3px solid #00866d;min-width:0}
+.traffic-results h2{font-size:20px;margin-bottom:14px}
+.traffic-evolution{margin-top:22px;background:#fff;padding:16px 0;border-block:1px solid #e5ecef}
+.traffic-evolution h3{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:0 16px}
+.traffic-evolution h3 span{font-size:12px;font-weight:400;color:var(--muted)}
+.traffic-chart-scroll{overflow-x:auto}
+.traffic-chart-scroll svg{display:block;min-width:620px}
+.traffic-chart-scroll h3{min-width:620px}
+.traffic-results h3{font-size:15px;margin:22px 0 10px}
+.traffic-results .k{border-radius:8px;border-top:3px solid #00866d}
+.traffic-week{display:grid;grid-template-columns:110px minmax(0,1fr) 150px;gap:12px;align-items:center;font-size:12px;margin:14px 0}
+.traffic-week>span{text-align:right}
+.traffic-track{height:10px;background:#e5ecef;margin:4px 0}
+.traffic-track i{display:block;height:100%}
+.traffic-scroll{overflow-x:auto;margin-top:20px}
+.traffic-table{width:100%;border-collapse:collapse;font-size:12px;background:white}
+.traffic-table th,.traffic-table td{padding:12px 10px;text-align:right;border-bottom:1px solid #e5ecef}
+.traffic-table th:first-child{text-align:left}
+.traffic-table thead{color:#006b57;background:#e5f3ee}
+@media(max-width:600px){.traffic-week{grid-template-columns:85px minmax(0,1fr);gap:8px}.traffic-week>span{grid-column:2}.traffic-table{min-width:530px}.traffic-results .k .v{font-size:23px}}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+
+/* ---------- filtros ---------- */
+.filters{position:sticky;top:0;z-index:30;background:rgba(10,13,26,.94);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.08);color:#dfe4f5}
+.filters .in{max-width:1280px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.filters .logo{height:22px;margin-right:6px}
+.f{display:flex;flex-direction:column;gap:3px}
+.f label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8d97bd}
+.sel{appearance:none;background:rgba(255,255,255,.07) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23aab3d4' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:8px 30px 8px 12px;font-size:13px;color:#fff;min-width:150px}
+.sel option{color:#0e1630}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chips button{white-space:nowrap;flex:none;font-size:12.5px;padding:7px 12px;border-radius:999px;color:#c3cae6;border:1px solid rgba(255,255,255,.12);display:flex;gap:7px;align-items:center;transition:background .2s}
+.chips button i{width:8px;height:8px;border-radius:50%;background:var(--bc)}
+.chips button:hover{background:rgba(255,255,255,.07)}
+.chips button.on{background:#fff;color:#0b0e1c;border-color:#fff}
+.seg2{display:flex;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:3px}
+.seg2 button{font-size:12.5px;padding:6px 10px;border-radius:7px;color:#c3cae6;white-space:nowrap}
+.seg2 button.on{background:#fff;color:#0b0e1c}
+.spacer{flex:1}
+
+/* ---------- portada ---------- */
+.hero{position:relative;overflow:hidden;color:#fff;padding:38px 0 112px;background:radial-gradient(120% 140% at 0% 0%,var(--h3) 0%,var(--h2) 45%,var(--h1) 100%);transition:background .5s}
+.hero::before{content:"";position:absolute;inset:0;opacity:.16;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.4) 0 1px,transparent 1px 7px)}
+.hero::after{content:"";position:absolute;right:-120px;bottom:-220px;width:540px;height:540px;border-radius:50%;background:radial-gradient(circle,var(--acc),transparent 62%);opacity:.5;filter:blur(8px)}
+.hero .in{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.blogo{height:44px;display:block;margin-bottom:20px}
+.bname{font-size:44px;font-weight:300;letter-spacing:-.03em;line-height:1;margin-bottom:20px}.bname b{font-weight:700}
+.btag{letter-spacing:.3em;text-transform:uppercase;font-size:12px;opacity:.8;margin:-10px 0 18px}
+.hero h1{font-size:32px;font-weight:600;letter-spacing:-.025em;line-height:1.14;max-width:760px;text-wrap:balance}
+.hero .sub{color:rgba(255,255,255,.72);margin-top:12px;font-size:14px}
+.stamp{font-size:12px;border:1px solid rgba(255,255,255,.3);padding:8px 14px;border-radius:999px;color:rgba(255,255,255,.88);white-space:nowrap}
+.tabs{position:relative;z-index:3;max-width:1280px;margin:-88px auto 0;padding:0 24px}
+.tabs .seg{display:inline-flex;gap:4px;padding:5px;border-radius:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(10px)}
+.tabs button{color:rgba(255,255,255,.85);font-size:13.5px;font-weight:500;padding:9px 16px;border-radius:10px;transition:background .2s}
+.tabs button:hover{background:rgba(255,255,255,.12)}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}
+
+main{position:relative;z-index:2;max-width:1280px;margin:22px auto 0;padding:0 24px 64px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.k{background:var(--card);border-radius:18px;padding:18px 18px 14px;box-shadow:0 18px 40px -24px rgba(14,22,48,.5);border:1px solid var(--line);transition:transform .25s,box-shadow .25s}
+.k:hover{transform:translateY(-3px);box-shadow:0 26px 46px -24px rgba(14,22,48,.55)}
+.k small{font-size:12px;color:var(--muted)}
+.k .v{font-size:28px;font-weight:700;letter-spacing:-.03em;margin:6px 0 4px}
+.k .s{font-size:12.5px;color:var(--muted);line-height:1.45}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-top:14px;align-items:start}
+.grid.one{grid-template-columns:1fr}
+.panel{background:var(--card);border-radius:18px;padding:20px 22px;border:1px solid var(--line)}
+.panel h3{font-size:15px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.panel h3 span{font-size:12px;color:var(--muted);font-weight:400}
+.row{display:grid;grid-template-columns:1.4fr 1fr .8fr 1.3fr .8fr;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--line);font-size:13.5px}
+.row.h{border-top:0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-top:4px}
+.row.click{cursor:pointer;border-radius:8px;transition:background .15s}.row.click:hover{background:#f6f7fc}
+.r{text-align:right}
+.badge{white-space:nowrap;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:999px;background:#eef1ff;color:#3540a8;margin-left:6px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:9px;vertical-align:-1px}
+.bar{height:8px;border-radius:99px;background:var(--line);position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:99px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.bar::after{content:"";position:absolute;top:-4px;bottom:-4px;left:calc(95% - 1px);width:2px;background:var(--ink);opacity:.3;border-radius:2px}
+.read p{font-size:13.5px;line-height:1.6;color:#36405f;padding:11px 0;border-top:1px solid var(--line)}
+.read p:first-of-type{border-top:0}.read b{color:var(--ink)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin:2px 0 6px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.empty{display:flex;gap:14px;align-items:center;background:var(--card);border:1px dashed #d6dbea;border-radius:18px;padding:22px;color:var(--muted);font-size:14px;line-height:1.5}
+.empty b{color:var(--ink);display:block;margin-bottom:2px}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.pill{font-size:12.5px;padding:7px 12px;border-radius:999px;background:#f1f3fa;font-weight:500}
+.note{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.55}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;margin-top:14px;align-items:start}
+.task{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px;color:var(--ink);text-decoration:none}
+details.td>.task{border-top:0}
+.task:first-of-type{border-top:0}
+details.td{border-top:1px solid var(--line)}details.td:first-of-type{border-top:0}
+details.td>summary{list-style:none;cursor:pointer;border-top:0}details.td>summary::-webkit-details-marker{display:none}
+details.td>summary .tn::after{content:"";display:inline-block;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 0 3px 9px;transition:transform .2s}
+details.td[open]>summary .tn::after{transform:rotate(-135deg);margin-bottom:-1px}
+details.td>summary:hover .tn{color:#3540a8}
+details.td .gal{padding:2px 0 14px;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+details.td .ph img{aspect-ratio:1/1}details.td .ph span{font-size:11.5px;padding:6px 8px}details.td .ph.big img{aspect-ratio:auto}
+details.td .ph{scroll-margin-top:150px}
+.ph span:empty{display:none}
+.badge.falta{background:#fdecee;color:#b4232f}
+.cmp+.cmp{margin-top:4px;padding-top:10px;border-top:1px dashed var(--line)}
+.cmph{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline;font-size:13px;margin:2px 0 8px}.cmph span{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.cmph small{color:var(--muted);font-size:12px}
+.nofoto{font-size:12.5px;line-height:1.45;color:#8f1d27;background:#fdf4f5;border:1px dashed #efb8bf;border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.pend{margin-top:14px;border:1px solid #f6d3d7;background:linear-gradient(180deg,#fff7f8,#fff 60%)}
+.pend .pl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.pr{border:1px solid #f3dde0;background:#fff;border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.35}.pr em{display:block;font-style:normal;color:#b4232f;font-weight:600;font-size:12.5px;margin-top:2px}.pr small{display:block;color:var(--muted);font-size:11.5px;margin-top:3px}
+.ph{position:relative}.ph.vid::after{content:"Video";position:absolute;top:7px;left:7px;font-size:10.5px;font-weight:600;padding:3px 8px 3px 20px;border-radius:999px;background:rgba(10,12,22,.72);color:#fff;letter-spacing:.02em;background-image:linear-gradient(transparent,transparent);}
+.ph.vid::before{content:"";position:absolute;top:12px;left:14px;z-index:1;border-left:7px solid #fff;border-top:4.5px solid transparent;border-bottom:4.5px solid transparent}
+.ph.big{grid-column:1/-1;cursor:zoom-out}.ph.big img{aspect-ratio:auto;max-height:80vh;object-fit:contain;background:#11131c}
+.tn{flex:1;line-height:1.4}.tm{font-size:12px;color:var(--muted);white-space:nowrap;text-align:right}
+.ok{color:var(--up);font-weight:600}.open{color:#b7791f;font-weight:600}
+.acts{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.act{background:#f7f8fc;border-radius:14px;padding:14px}.act b{font-size:14px}.act small{display:block;color:var(--muted);font-size:12px;margin:4px 0 6px}.act p{font-size:13px;color:#36405f;line-height:1.5}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.ph{display:block;border-radius:12px;overflow:hidden;background:#eef0f6;text-decoration:none;color:var(--ink)}
+.ph img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:#e6e9f2}
+.ph span{display:block;font-size:12px;padding:8px 10px;line-height:1.35}
+.ph.noimg img{display:none}.ph.noimg::before{content:"Foto no disponible";display:flex;align-items:center;justify-content:center;aspect-ratio:4/5;color:var(--muted);font-size:12.5px}
+.rfm{display:grid;grid-template-columns:150px 1fr 70px 52px;gap:10px;align-items:center;padding:7px 0;font-size:13px}
+.rfm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rfm b{text-align:right}.rfm small{text-align:right;font-size:11.5px;color:var(--muted)}
+.bar2{height:8px;background:var(--line);border-radius:99px;overflow:hidden}.bar2 i{display:block;height:100%;background:#7b8cff;border-radius:99px}
+.sends{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.send{background:#f7f8fc;border-radius:14px;padding:14px;font-size:13px}.send b{display:block;font-size:14px;margin:8px 0 2px}.send>small{color:var(--muted)}
+.mets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;font-weight:600}.mets small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.foot{display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid #e3e6f0;color:var(--muted)}.foot b{color:var(--ink);margin:0;display:inline}
+.sin{margin-top:10px;color:#b7791f;font-weight:600}
+button.ph{border:0;padding:0;cursor:zoom-in;text-align:left;font:inherit}
+.evg+.evg{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}.evt{margin-bottom:10px;font-size:14px}.evt small{color:var(--muted);margin-left:8px;font-size:12px}
+svg text{font-family:Sora,sans-serif}
+.tip{position:fixed;pointer-events:none;background:#0e1630;color:#fff;font-size:12px;padding:7px 10px;border-radius:8px;opacity:0;transition:opacity .12s;z-index:50;white-space:nowrap}
+.fade{animation:fade .35s ease}@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (max-width:980px){.sgrid{grid-template-columns:1fr}.rfm{grid-template-columns:110px 1fr 60px 44px}.mets{grid-template-columns:repeat(2,1fr)}.filters{position:static}.chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.f:has(.chips){flex:1 1 100%;min-width:0;order:-1}.kpis{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.row{grid-template-columns:1.4fr 1fr .9fr .8fr}.row .hide{display:none}
+  .hero h1{font-size:25px}.bname{font-size:34px}.tabs .seg{display:flex;overflow-x:auto;max-width:100%}.filters .logo{display:none}.sel{min-width:0;width:100%}.f{flex:1 1 140px}}
+@media print{.filters,.tabs{display:none}.hero{padding-bottom:40px}main{margin-top:10px}.k,.panel{box-shadow:none;break-inside:avoid}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== Ejecución por pilares ===== */
+.exhero{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:12px}
+.exk{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;text-decoration:none;color:var(--ink)}
+.exk small{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.exk b{font-size:30px;font-weight:600;line-height:1.1}
+.exk span{font-size:12px;color:var(--muted)}.exk em{color:var(--dn);font-style:normal;font-weight:600}
+.exk.pil{border-top:4px solid var(--pc)}.exk.pil small{color:var(--pc);font-weight:600}
+.exk.pil:hover{box-shadow:0 6px 18px rgba(14,22,48,.08)}
+.pilar{margin-top:22px;scroll-margin-top:150px}
+.pilar>header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:3px solid var(--pc);padding-bottom:10px;margin-bottom:14px}
+.pilar h2{font-size:20px;font-weight:600;color:var(--pc);display:flex;align-items:center;gap:8px}
+.pilar header p{font-size:12.5px;color:var(--muted);margin-top:4px;max-width:640px}
+.pilar header>span{font-size:12px;color:var(--muted);white-space:nowrap}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;align-items:start}
+.acard{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:block}
+.acard summary{list-style:none;cursor:pointer;display:block}.acard summary::-webkit-details-marker{display:none}
+.acard[open]{grid-column:1/-1}
+.acard[open] summary{display:grid;grid-template-columns:minmax(200px,300px) 1fr;align-items:stretch}
+.acov{position:relative;aspect-ratio:4/3;background:#eef0f6;display:flex;align-items:center;justify-content:center;color:var(--pc)}
+.acov img{width:100%;height:100%;object-fit:cover;display:block}
+.acov.none{background:color-mix(in srgb,var(--pc) 9%,#fff);aspect-ratio:auto;height:92px}
+.acnt{position:absolute;right:10px;bottom:10px;background:rgba(14,22,48,.78);color:#fff;font-size:12px;font-weight:600;border-radius:20px;padding:3px 9px}
+.abody{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.atags{display:flex;flex-wrap:wrap;gap:6px}
+.atag{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:#f1f3f8;border-radius:6px;padding:3px 7px;display:inline-flex;align-items:center;gap:4px}
+.atit{font-size:14px;font-weight:600;line-height:1.35}
+.acamp{font-size:12px;color:var(--muted)}
+.ameta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+.est{font-weight:600;border-radius:20px;padding:2px 9px;font-size:11.5px}
+.est.ok{background:#e3f4ea;color:#0f8a52}.est.done{background:#e8edfb;color:#2b3d8f}.est.open{background:#fdf3dc;color:#9a6a00}.est.falta{background:#fde7ea;color:#d1263a}
+.ares{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-size:11.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px;margin-top:2px}
+.ares b{color:var(--ink);font-size:13px}
+.aver{display:block;font-size:12px;font-weight:600;color:var(--pc);padding:0 14px 12px}
+.acard[open] .aver{display:none}
+.agal{padding:6px 14px 4px;border-top:1px solid var(--line)}
+@media(max-width:760px){.exhero{grid-template-columns:1fr 1fr}.acard[open] summary{display:block}}
+/* ===== CRM: 4 preguntas ===== */
+.cqgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:6px}
+.cq{background:var(--card);border:1px solid var(--line);border-left:5px solid #c4c9d9;border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.cq.bien{border-left-color:#0f8a52}.cq.mal{border-left-color:#d1263a}
+.cq small{font-size:12.5px;font-weight:600;color:var(--ink)}
+.cq b{font-size:28px;font-weight:600;line-height:1.15;margin-top:4px}
+.cq span{font-size:12px;color:var(--muted)}.cq.bien span{color:#0f8a52}.cq.mal span{color:#d1263a}
+.cq p{font-size:12.5px;line-height:1.5;color:var(--muted);margin-top:6px}
+.crmmas{margin-top:18px}
+.crmmas>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--h3);padding:12px 0;list-style:none}
+.crmmas>summary::before{content:'＋ '}.crmmas[open]>summary::before{content:'－ '}
+@media(max-width:900px){.cqgrid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.cqgrid,.exhero{grid-template-columns:1fr}}
+
+.ares span{display:inline-flex;gap:4px;align-items:baseline}.ares i{font-style:normal}
+.alist{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 16px;margin-top:14px}
+.alist h4{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:10px 0 4px}
+.arow{display:grid;grid-template-columns:130px 1fr auto auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+.alist h4+.arow,.alist .arow:first-child{border-top:0}
+.arow b{font-weight:500}.arow b small{color:var(--muted);font-weight:400}
+.arow .atag{justify-self:start}.ard{color:var(--muted);font-size:12px;white-space:nowrap}
+@media(max-width:760px){.arow{grid-template-columns:1fr auto}.arow .atag,.ard{display:none}}
+/* carrusel */
+.car{position:relative;overflow:hidden}
+.car .cs{position:absolute;inset:0;margin:0;opacity:0;transition:opacity .35s}
+.car .cs.on{opacity:1}
+.car .cs img{width:100%;height:100%;object-fit:cover;display:block}
+.car figcaption{position:absolute;left:0;right:0;bottom:0;padding:22px 12px 9px;background:linear-gradient(transparent,rgba(8,12,28,.78));color:#fff;font-size:12.5px;font-weight:600;display:flex;gap:6px;align-items:center}
+.car figcaption em{font-style:normal;font-size:10.5px;background:rgba(255,255,255,.22);border-radius:4px;padding:1px 6px}
+.cb{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#0e1630;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:2}
+.cb.prev{left:8px}.cb.next{right:8px}.cb:hover{background:#fff}
+.cn{position:absolute;top:8px;right:10px;background:rgba(14,22,48,.72);color:#fff;font-size:11.5px;font-weight:600;border-radius:20px;padding:2px 9px;z-index:2}
+.alist{margin-top:14px}
+/* campañas */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start}
+.ccard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:14px;padding:14px 16px}
+.cch{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.cch>div{display:flex;flex-direction:column;gap:3px}
+.cch b{font-size:14.5px;font-weight:600;line-height:1.3}.cch small{font-size:12px;color:var(--muted)}
+.ctag{font-size:11px;font-weight:600;border-radius:20px;padding:2px 9px;background:color-mix(in srgb,var(--pc) 12%,#fff);color:var(--pc);white-space:nowrap}
+.cdet{margin-top:10px;font-size:12.5px;line-height:1.5;color:#3a4366;display:flex;flex-direction:column;gap:4px}
+.cdet b{color:var(--ink);font-weight:600}
+.cdet.clamp{max-height:7.6em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent)}
+.cmore{border:0;background:none;color:var(--pc);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:6px 0 0}
+.psub{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:14px 0 8px}
+.prox{background:color-mix(in srgb,#6b4fd8 4%,transparent);border-radius:18px;padding:16px 18px 18px;margin-top:28px}
+.arow{grid-template-columns:130px 1fr auto}
+</style>
+</head>
+<body>
+<div class="filters"><div class="in">
+  <img class="logo" id="ublogo" alt="UB Cuarenta">
+  <div class="f"><label for="fSem">Semana</label><select class="sel" id="fSem"></select></div>
+  <div class="f"><label>Marca</label><div class="chips" id="fMarca"></div></div>
+  <div class="f"><label for="fTienda">Tienda</label><select class="sel" id="fTienda"></select></div>
+  <div class="spacer"></div>
+  <div class="f"><label>Comparar contra</label><div class="seg2" id="fComp"></div></div>
+</div></div>
+<header class="hero"><div class="in">
+  <div><div id="bmark"></div><h1 id="title"></h1><div class="sub" id="sub"></div></div>
+  <div class="stamp">Comité gerencial · Marketing y e-commerce</div>
+</div></header>
+<div class="tabs"><div class="seg" id="tabs"></div></div>
+<main id="main"></main>
+<div class="tip" id="tip"></div>
+<script>
+const PKG=__DATA__;const B=PKG.base,LOGO=PKG.logos,CAMP=PKG.camp;
+const BR=[
+ {id:'todas',n:'Todas',full:'UB Cuarenta',c:'#7b8cff',h:['#0b1233','#14204f','#2b3d8f'],acc:'#ff5a6a'},
+ {id:'levis',n:"Levi's Línea",c:'#ff4d5e',h:['#3d0008','#7a0010','#c8102e'],acc:'#ff8a5c',logo:'levis'},
+ {id:'levis-outlet',n:"Levi's Outlet",c:'#d9466a',h:['#1d0a10','#4a1222','#8a1d3a'],acc:'#c8102e',logo:'levis',tag:'Outlet'},
+ {id:'desigual',n:'Desigual',c:'#ff8a4c',h:['#121212','#2a1a3d','#5b2a6e'],acc:'#ff6b3d',logo:'desigual'},
+ {id:'wiseman',n:'Wiseman',c:'#2ec4b6',h:['#06201f','#0d3d3b','#15706b'],acc:'#6ee7d8',logo:'wiseman'},
+ {id:'digital',n:'Canal Digital',c:'#6c8cff',h:['#081436','#0f2470','#2f5bdc'],acc:'#7ad3ff',solo:true}];
+const TABS=['Ejecución','Performance','CRM','Presupuesto','Análisis'];
+const COMP=[['ly','Año anterior'],['prev','Semana anterior'],['meta','Meta']];
+const T=Object.fromEntries(B.tiendas.map(t=>[t.id,t]));
+const S=B.semanas;
+let st={sem:S[S.length-1].id,marca:'todas',tienda:'',comp:'ly',tab:'Performance'};
+try{const h=new URLSearchParams(location.hash.slice(1));for(const k of Object.keys(st))if(h.get(k)!=null)st[k]=h.get(k)}catch(e){}
+if(!S.find(s=>s.id===st.sem))st.sem=S[S.length-1].id;if(st.marca==='digital'||!['todas','levis','levis-outlet','desigual','wiseman'].includes(st.marca)){st.marca='todas';st.tienda=''}
+
+const M=v=>v==null||!isFinite(v)?'—':'$'+(v/1e6).toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1})+'M';
+const P=(v,s=true)=>v==null||!isFinite(v)?'—':(s&&v>0?'+':'')+(v*100).toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const N=v=>v==null||!isFinite(v)?'—':Math.round(v).toLocaleString('es-CO');
+const $=v=>v==null||!isFinite(v)?'—':'$'+Math.round(v).toLocaleString('es-CO');
+const col=c=>c==null||!isFinite(c)?'#c4c9d9':c>=.95?'#0f8a52':c>=.7?'#e0a21f':'#d1263a';
+const fl=s=>new Date(s+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'long'});
+const semIdx=id=>S.findIndex(s=>s.id===id);
+const uOf=tid=>T[tid].unidad;
+
+function scope(marca=st.marca,tienda=st.tienda){return B.tiendas.filter(t=>(marca==='todas'||t.unidad===marca)&&(!tienda||t.id===tienda)).map(t=>t.id)}
+function agg(semId,ids){
+  const rows=B.datos.filter(r=>r.s===semId&&ids.includes(r.t));
+  const o={venta:0,ly:0,vc:0,lyc:0,meta:0,fac:0,und:0,traf:0,ext:0,ftraf:0,ses:0,chk:0,nuevas:[],n:rows.length};
+  rows.forEach(r=>{o.venta+=r.venta;o.meta+=r.meta;o.fac+=r.fac;o.und+=r.und;o.ly+=r.ly;
+    if(r.ly>0){o.vc+=r.venta;o.lyc+=r.ly}else if(r.venta>0)o.nuevas.push(T[r.t].nombre);
+    if(r.traf){o.traf+=r.traf;o.ftraf+=r.fac;if(r.ext)o.ext+=r.ext}
+    if(r.ses){o.ses+=r.ses;o.chk+=r.fac}});
+  return o}
+function delta(semId,ids){
+  const a=agg(semId,ids);
+  if(st.comp==='ly')return {a,base:a.lyc,cur:a.vc,lbl:'vs. año anterior',v:a.lyc?a.vc/a.lyc-1:null};
+  if(st.comp==='prev'){const i=semIdx(semId);if(i<1)return {a,v:null,lbl:'vs. semana anterior'};const p=agg(S[i-1].id,ids);return {a,base:p.venta,cur:a.venta,lbl:'vs. semana '+S[i-1].etiqueta,v:p.venta?a.venta/p.venta-1:null}}
+  return {a,lbl:'vs. meta',v:a.meta?a.venta/a.meta-1:null}}
+
+function tip(e,html){const t=document.getElementById('tip');if(!html){t.style.opacity=0;return}t.innerHTML=html;t.style.opacity=1;t.style.left=Math.min(e.clientX+12,innerWidth-t.offsetWidth-8)+'px';t.style.top=(e.clientY-36)+'px'}
+
+function trend(ids,color){
+  const i=semIdx(st.sem),ws=S.slice(0,i+1).slice(-10),d=ws.map(w=>({w,a:agg(w.id,ids)}));
+  const W=720,H=230,pl=10,pb=28,mx=Math.max(...d.map(x=>Math.max(x.a.venta,x.a.meta,x.a.ly)))*1.1||1,bw=(W-pl*2)/d.length,y=v=>H-pb-(H-pb-14)*v/mx;
+  let s='';const lyPts=[],mtPts=[];
+  d.forEach((x,k)=>{const cx=pl+bw*k+bw/2,on=x.w.id===st.sem;
+    s+=`<rect x="${cx-bw*.3}" y="${y(x.a.venta)}" width="${bw*.6}" height="${Math.max(0,H-pb-y(x.a.venta))}" rx="6" fill="${color}" opacity="${on?1:.45}" data-t="Semana ${x.w.etiqueta}: ${M(x.a.venta)} · meta ${M(x.a.meta)} · año ant. ${M(x.a.ly)}"/>
+    <text x="${cx}" y="${H-9}" text-anchor="middle" font-size="12" fill="${on?'#0e1630':'#5d6688'}" font-weight="${on?600:400}">${x.w.etiqueta}</text>`;
+    if(x.a.ly)lyPts.push([cx,y(x.a.ly)]);if(x.a.meta)mtPts.push([cx,y(x.a.meta)])});
+  const path=p=>p.map((q,k)=>(k?'L':'M')+q[0].toFixed(1)+','+q[1].toFixed(1)).join('');
+  s+=`<path d="${path(lyPts)}" fill="none" stroke="#0e1630" stroke-width="2" stroke-dasharray="4 4"/>${lyPts.map(q=>`<circle cx="${q[0]}" cy="${q[1]}" r="3" fill="#fff" stroke="#0e1630" stroke-width="1.6"/>`).join('')}`;
+  s+=mtPts.map(q=>`<line x1="${q[0]-bw*.36}" x2="${q[0]+bw*.36}" y1="${q[1]}" y2="${q[1]}" stroke="#e0a21f" stroke-width="2.5" stroke-linecap="round"/>`).join('');
+  return `<div class="legend"><span><i style="background:${color}"></i>Venta</span><span><i style="background:#e0a21f;height:3px;vertical-align:3px"></i>Meta</span><span><i style="background:#0e1630;height:2px;vertical-align:3px"></i>Año anterior</span></div><svg viewBox="0 0 ${W} ${H}" width="100%" class="hov">${s}</svg>`}
+
+function daily(ids,color,digital){
+  const w=S[semIdx(st.sem)],days=[];for(let k=0;k<7;k++){const d=new Date(w.inicio+'T12:00:00');d.setDate(d.getDate()+k);days.push(d.toISOString().slice(0,10))}
+  const v=days.map(f=>B.dias.filter(x=>x.f===f&&ids.includes(x.t)).reduce((a,x)=>({v:a.v+x.v,tr:a.tr+x.tr}),{v:0,tr:0}));
+  const W=640,H=210,pb=26,mv=Math.max(...v.map(x=>x.v))*1.15||1,mt=Math.max(...v.map(x=>x.tr))*1.18||1,bw=(W-40)/7,lab=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  let s='',pts=[];v.forEach((x,k)=>{const cx=20+bw*k+bw/2,h=(H-pb-30)*x.v/mv;
+    s+=`<rect x="${cx-bw*.28}" y="${H-pb-Math.max(0,h)}" width="${bw*.56}" height="${Math.max(0,h)}" rx="6" fill="${color}" data-t="${fl(days[k])}: ${M(x.v)} · ${N(x.tr)} ${digital?'sesiones':'ingresos'}"/><text x="${cx}" y="${H-8}" text-anchor="middle" font-size="12" fill="#5d6688">${lab[k]}</text><text x="${cx}" y="${H-pb-h-6}" text-anchor="middle" font-size="11.5" font-weight="600" fill="#0e1630">${(x.v/1e6).toFixed(x.v>=1e7?0:1).replace('.',',')}M</text>`;
+    if(x.tr)pts.push([cx,H-pb-(H-pb-30)*x.tr/mt])});
+  if(pts.length>1)s+=`<path d="${pts.map((p,k)=>(k?'L':'M')+p[0]+','+p[1]).join('')}" fill="none" stroke="#0e1630" stroke-width="2" stroke-dasharray="4 4"/>`+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="#0e1630" stroke-width="2"/>`).join('');
+  return `<div class="legend"><span><i style="background:${color}"></i>Venta</span>${pts.length?`<span><i style="background:#0e1630;height:2px;vertical-align:3px"></i>${digital?'Sesiones (web)':'Ingresos a tienda'}</span>`:''}</div><svg viewBox="0 0 ${W} ${H}" width="100%" class="hov">${s}</svg>`}
+
+function table(title,items,onclick){
+  return `<div class="panel"><h3>${title}<span>Línea gris = 95% de la meta</span></h3>
+   <div class="row h"><div>${onclick==='marca'?'Unidad':'Tienda'}</div><div class="r">Venta</div><div class="r">${COMP.find(c=>c[0]===st.comp)[0]==='meta'?'vs. meta':st.comp==='ly'?'vs. AA':'vs. sem. ant.'}</div><div class="hide">Cumplimiento</div><div class="r">Meta</div></div>
+   ${items.map(x=>{const d=delta(st.sem,x.ids),c=d.a.meta?d.a.venta/d.a.meta:null,nueva=onclick==='tienda'&&!d.a.lyc&&d.a.venta;
+     return `<div class="row num${x.solo?'':' click'}" ${x.solo?'title="Canal digital: solo en el resumen de la compañía"':`onclick="${onclick==='marca'?`set({marca:'${x.id}',tienda:''})`:`set({tienda:'${x.id}'})`}"`}><div>${x.c?`<span class="dot" style="background:${x.c}"></span>`:''}${x.n}${nueva?'<span class="badge">Nueva</span>':''}</div><div class="r" style="font-weight:600">${M(d.a.venta)}</div><div class="r ${d.v<0?'dn':'up'}">${P(d.v)}</div><div class="bar hide"><i style="width:${Math.min((c||0)*100,100)}%;background:${col(c)}"></i></div><div class="r" style="font-weight:600;color:${col(c)}">${P(c,false)}</div></div>`}).join('')}</div>`}
+
+function lectura(ids){
+  const units=BR.slice(1).map(b=>{const d=delta(st.sem,scope(b.id,''));return {b,d,c:d.a.meta?d.a.venta/d.a.meta:0}}).filter(x=>x.d.a.venta>0);
+  const tot=delta(st.sem,ids),best=[...units].sort((p,q)=>q.c-p.c)[0],worst=[...units].sort((p,q)=>p.c-q.c)[0];
+  return `<p><b>La compañía vende ${M(tot.a.venta)}</b>, ${P(tot.v)} ${tot.lbl}, y llega al ${P(tot.a.venta/tot.a.meta,false)} de la meta.</p>
+   <p><b>${best.b.n}</b> es la unidad más cerca de su meta (${P(best.c,false)}).</p>
+   <p><b>Foco: ${worst.b.n}</b>, con ${P(worst.c,false)} de cumplimiento y ${P(worst.d.v)} ${worst.d.lbl}.</p>`}
+
+function trafficLyChange(rows){
+  const paired=rows.filter(r=>Number.isFinite(r.traf)&&r.traf>=0&&Number.isFinite(r.trafLy)&&r.trafLy>0);
+  const ly=paired.reduce((sum,r)=>sum+r.trafLy,0);
+  return ly?paired.reduce((sum,r)=>sum+r.traf,0)/ly-1:null;
+}
+function trafficResults(ids){
+  const physical=ids.filter(id=>T[id].unidad!=='digital');
+  const rows=B.datos.filter(r=>r.s===st.sem&&physical.includes(r.t));
+  const valid=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
+  const total=(rs,key)=>{const vs=rs.filter(r=>valid(r[key]));return vs.length?vs.reduce((s,r)=>s+r[key],0):null};
+  const capture=rs=>{const paired=rs.filter(r=>valid(r.traf)&&valid(r.ext));const ex=total(paired,'ext');return ex>0?total(paired,'traf')/ex:null};
+  const change=trafficLyChange;
+  const ws=S.slice(0,semIdx(st.sem)+1).slice(-10).map(w=>({w,rs:B.datos.filter(r=>r.s===w.id&&physical.includes(r.t))}));
+  const max=Math.max(1,...ws.map(x=>total(x.rs,'traf')||0))*1.25;
+  const capMax=Math.max(.01,...ws.map(x=>capture(x.rs)||0))*1.3;
+  const extMax=Math.max(1,...ws.map(x=>total(x.rs,'ext')||0))*1.2;
+  const W=720,H=230,bottom=202,bw=660/ws.length,y=v=>bottom-170*v/max;
+  let points=[],chart='',captureChart='',exteriorBars='';
+  [0,.5,1].forEach(f=>{const py=y(max*f);chart+=`<line x1="48" x2="715" y1="${py}" y2="${py}" stroke="#e2e9e7"/><text x="42" y="${py+4}" text-anchor="end" font-size="10" fill="#5d6688">${N(max*f)}</text>`});
+  ws.forEach((x,k)=>{const cx=50+bw*k+bw/2,ext=total(x.rs,'ext'),inside=total(x.rs,'traf'),on=x.w.id===st.sem,rate=capture(x.rs);
+    const label=`Semana ${x.w.etiqueta}: exterior ${N(ext)} · interior ${N(inside)} · captura ${P(capture(x.rs),false)}`;
+    if(inside!==null)chart+=`<rect x="${cx-bw*.28}" y="${y(inside)}" width="${bw*.56}" height="${bottom-y(inside)}" rx="5" fill="${on?'#007a60':'#91cebc'}" data-t="${label}"/><text x="${cx}" y="${y(inside)-8}" text-anchor="middle" font-size="11" font-weight="600" fill="#00664f">${N(inside)}</text>`;
+    else chart+=`<text x="${cx}" y="190" text-anchor="middle" font-size="12" fill="#5d6688">—</text>`;
+    if(rate!==null){const py=210-160*rate/capMax;points.push(`${points.length?'L':'M'}${cx},${py}`);captureChart+=`<circle cx="${cx}" cy="${py}" r="${on?5:3.5}" fill="${on?'#bd5b12':'white'}" stroke="#bd5b12" stroke-width="2" data-t="${label}"/><text x="${cx}" y="${py-12}" text-anchor="middle" font-size="12" font-weight="600" fill="#9b4809" stroke="white" stroke-width="3" paint-order="stroke">${P(rate,false)}</text>`}else points.push('');
+    if(ext!==null){const eh=160*ext/extMax;exteriorBars+=`<rect x="${cx-bw*.28}" y="${210-eh}" width="${bw*.56}" height="${eh}" rx="4" fill="${on?'#216daa':'#a6c9e6'}" data-t="${label}"/>`}
+    captureChart+=`<text x="${cx}" y="230" text-anchor="middle" font-size="12" fill="#5d6688">${x.w.etiqueta}</text><text x="${cx}" y="248" text-anchor="middle" font-size="10" fill="#205e91">${N(ext)}</text>`;
+    chart+=`<text x="${cx}" y="${H-9}" text-anchor="middle" font-size="12" fill="${on?'#0e1630':'#5d6688'}" font-weight="${on?600:400}">${x.w.etiqueta}</text>`;
+  });
+  // Restart the line after missing observations rather than connecting across gaps.
+  const line=points.map((p,i)=>p&&(!i||!points[i-1])?p.replace(/^L/,'M'):p).join(' ');
+  const axes=[0,.5,1].map(f=>{const py=210-160*f;return `<line x1="50" x2="710" y1="${py}" y2="${py}" stroke="#e2e9e7"/><text x="45" y="${py+4}" text-anchor="end" font-size="9" fill="#205e91">${N(extMax*f)}</text><text x="720" y="${py+4}" font-size="10" fill="#9b4809">${P(capMax*f,false)}</text>`}).join('');
+  captureChart=`<text x="50" y="20" font-size="12" fill="#205e91">Barras: exterior · personas</text><text x="710" y="20" text-anchor="end" font-size="12" fill="#9b4809">Línea: captura · %</text>`+axes+exteriorBars+`<path d="${line}" fill="none" stroke="#bd5b12" stroke-width="2.5" pointer-events="none"/>`+captureChart;
+  const metric=(label,value,sub)=>`<div class="k"><small>${label}</small><div class="v">${value}</div><div class="s">${sub}</div></div>`;
+  const trafficGroups=st.marca==='todas'
+    ? BR.filter(b=>b.id!=='todas'&&!b.solo).map(b=>({name:b.n,rows:rows.filter(r=>T[r.t].unidad===b.id)}))
+    : rows.map(r=>({name:T[r.t].nombre,rows:[r]}));
+return `<section class="traffic-results fade" aria-label="Resultados de tráfico"><h2>Resultados de tráfico</h2><div class="kpis num">${metric('Tráfico exterior',N(total(rows,'ext')),'Personas frente al punto')}${metric('Ingresos a tiendas',N(total(rows,'traf')),'Conteo de ingresos')}${metric('Tasa de captura',P(capture(rows),false),'Interior / exterior · tiendas con ambos datos')}${metric('Variación de ingresos',change(rows)==null?'Sin año anterior':P(change(rows)),'Vs. misma semana del año anterior · tiendas comparables')}</div>
+  <div class="traffic-evolution"><h3>Ingresos a tienda<span>Últimas ${ws.length} semanas · personas</span></h3><div class="traffic-chart-scroll"><svg viewBox="0 0 ${W} ${H}" width="100%" class="hov" role="img" aria-label="Ingresos a tienda por semana">${chart}</svg><h3>Tasa de captura y tráfico exterior <span>Izquierda: personas · Derecha: porcentaje</span></h3><svg viewBox="0 0 780 265" width="100%" class="hov" role="img" aria-label="Tasa de captura y tráfico exterior por semana">${captureChart}</svg></div></div>
+  <div class="traffic-scroll"><table class="traffic-table num"><thead><tr><th>${st.marca==='todas'?'Marca':'Tienda'}</th><th>Exterior</th><th>Interior</th><th>Captura</th><th>Var. vs. año anterior</th></tr></thead><tbody>${trafficGroups.map(g=>`<tr><th scope="row">${g.name}</th><td>${N(total(g.rows,'ext'))}</td><td>${N(total(g.rows,'traf'))}</td><td>${P(capture(g.rows),false)}</td><td>${change(g.rows)==null?'Sin año anterior':P(change(g.rows))}</td></tr>`).join('')}</tbody>${st.marca==='todas'?`<tfoot><tr><th scope="row">Total tiendas físicas</th><td>${N(total(rows,'ext'))}</td><td>${N(total(rows,'traf'))}</td><td>${P(capture(rows),false)}</td><td>${P(change(rows))}</td></tr></tfoot>`:''}</table></div>
+  <p class="note">Variación de ingresos frente a la misma semana retail del año anterior, solo tiendas con tráfico del año anterior y semana completa. Sin año anterior: no hay base para comparar; no se calcula variación. Meta de tráfico no disponible. Sesiones web separadas del tráfico físico.${st.marca==='todas'?` Sesiones esta semana: ${N(total(B.datos.filter(r=>r.s===st.sem&&ids.includes(r.t)),'ses'))}.`:''}</p></section>`;
+}
+
+function performance(b){
+  const ids=scope(),d=delta(st.sem,ids),a=d.a,dig=st.marca==='digital',c=a.meta?a.venta/a.meta:null;
+  const conv=dig?(a.ses?a.chk/a.ses:null):(a.traf?a.ftraf/a.traf:null),cap=a.ext?a.traf/a.ext:null;
+  const prevI=semIdx(st.sem)-1,pa=prevI>=0?agg(S[prevI].id,ids):null;
+  let h=`<div class="kpis num fade">
+   <div class="k"><small>Venta semana</small><div class="v">${M(a.venta)}</div><div class="s"><span class="${d.v<0?'dn':'up'}">${d.v==null?'':d.v<0?'▼':'▲'} ${P(d.v==null?null:Math.abs(d.v),false)}</span> ${d.lbl}${st.comp==='ly'&&a.nuevas.length?'*':''}</div></div>
+   <div class="k"><small>Cumplimiento de meta</small><div class="v" style="color:${col(c)}">${P(c,false)}</div><div class="s">Meta ${M(a.meta)}</div><div class="bar" style="margin-top:12px"><i style="width:${Math.min((c||0)*100,100)}%;background:${col(c)}"></i></div></div>
+   <div class="k"><small>${dig?'Sesiones (web)':st.marca==='todas'&&!st.tienda?'Ingresos a tiendas':'Ingresos a tienda'}</small><div class="v">${N(dig?a.ses:a.traf)}</div><div class="s">${dig?`Conversión ${P(conv,false)}`:a.traf?`Conversión ${P(conv,false)} · Captura ${P(cap,false)}`:'Sin contador de tráfico'}${` · ${P(trafficLyChange(B.datos.filter(r=>r.s===st.sem&&ids.includes(r.t))))} vs. misma semana del año anterior (comparables)`}</div></div>
+   <div class="k"><small>Ticket promedio</small><div class="v">${$(a.venta/a.fac)}</div><div class="s">UPT ${a.fac?(a.und/a.fac).toLocaleString('es-CO',{maximumFractionDigits:2}):'—'} · ${N(a.fac)} facturas</div></div></div>`;
+  h+=`<div class="grid fade"><div class="panel"><h3>Evolución semanal<span>Últimas ${Math.min(10,semIdx(st.sem)+1)} semanas</span></h3>${trend(ids,b.c)}</div>`;
+  h+=st.marca==='todas'&&!st.tienda?`<div class="panel read"><h3>Lectura de la semana</h3>${lectura(ids)}</div></div>`:`<div class="panel"><h3>Venta por día<span>${dig?'Tienda online':'Tiendas con contador'}</span></h3>${daily(ids,b.c,dig)}</div></div>`;
+  if(st.marca==='todas'&&!st.tienda)h+=`<div class="grid one fade">${table('Ventas por unidad de negocio',BR.slice(1).map(x=>({id:x.id,n:x.n,c:x.c,solo:x.solo,ids:scope(x.id,'')})),'marca')}</div>`;
+  else if(!st.tienda&&!dig){const its=scope().map(id=>({id,n:T[id].nombre,ids:[id],v:agg(st.sem,[id]).venta})).filter(x=>x.v>0).sort((p,q)=>q.v-p.v);
+    h+=`<div class="grid one fade">${table('Tiendas',its,'tienda')}</div>`;}
+  const w=S[semIdx(st.sem)];
+  h+=`<p class="note">${st.comp==='ly'&&a.nuevas.length?`* Variación sobre tiendas comparables; sin año anterior: ${[...new Set(a.nuevas)].join(', ')}. `:''}Semana retail ${w.etiqueta}: ${fl(w.inicio)} al ${fl(w.fin)}. Año anterior: ${fl(w.ly_inicio)} al ${fl(w.ly_fin)} de ${w.ly_inicio.slice(0,4)}. Ventas de tiendas y canal digital; ingresos a tienda por contador; sesiones de la tienda online; metas y año anterior según el plan de ventas. Desigual Acqua no se incluye.</p>`;
+  return h+trafficResults(ids)}
+
+function otra(b){
+  const map={'Ejecución':['Acciones y campañas de la semana','Vitrinas, BTL, pauta y evidencias fotográficas.'],'CRM':['Clientes y campañas CRM','Envíos de email, SMS y WhatsApp, recompra y evolución de segmentos.'],
+    'Presupuesto':['Ejecución de presupuesto','Inversión contabilizada por proveedor y tipo de gasto.'],'Análisis':['Lectura gerencial','Qué movió la semana, en tres frases, y las prioridades.']}[st.tab];
+  const w=S[semIdx(st.sem)],cs=CAMP.filter(c=>c.inicio===w.inicio&&(st.marca==='todas'||c.u===st.marca));
+  const camp=st.tab==='Ejecución'&&cs.length?`<div class="panel fade" style="margin-bottom:14px"><h3>Campañas CRM de la semana</h3><div class="pills">${cs.map(c=>`<span class="pill">${st.marca==='todas'?`<span class="dot" style="background:${BR.find(x=>x.id===c.u).c}"></span>`:''}${c.c}</span>`).join('')}</div></div>`:'';
+  return camp+`<div class="empty fade"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8a93b5" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 14h8"/></svg><div><b>${map[0]}</b>${map[1]} Esta sección se construye en la siguiente etapa.</div></div>`}
+
+function render(){
+  if(st.marca==='todas')st.tab='Performance';
+  const b=BR.find(x=>x.id===st.marca)||BR[0],rs=document.documentElement.style;
+  rs.setProperty('--h1',b.h[0]);rs.setProperty('--h2',b.h[1]);rs.setProperty('--h3',b.h[2]);rs.setProperty('--acc',b.acc);
+  document.getElementById('fSem').innerHTML=[...S].reverse().map(s=>`<option value="${s.id}" ${s.id===st.sem?'selected':''}>Semana ${s.etiqueta} · ${fl(s.inicio)} al ${fl(s.fin)}</option>`).join('');
+  document.getElementById('fMarca').innerHTML=BR.filter(x=>!x.solo).map(x=>`<button class="${x.id===st.marca?'on':''}" style="--bc:${x.c}" onclick="set({marca:'${x.id}',tienda:''})"><i></i>${x.n}</button>`).join('');
+  const ts=st.marca==='todas'?[]:scope(st.marca,'').filter(id=>B.datos.some(r=>r.t===id&&r.s===st.sem&&r.venta>0));
+  const ft=document.getElementById('fTienda');ft.innerHTML=`<option value="">${st.marca==='todas'?'Elige una marca':'Todas las tiendas'}</option>`+ts.map(id=>`<option value="${id}" ${id===st.tienda?'selected':''}>${T[id].nombre}</option>`).join('');ft.disabled=st.marca==='todas'||st.marca==='digital';if(st.marca==='digital')ft.innerHTML='<option>Tienda online</option>';
+  document.getElementById('fComp').innerHTML=COMP.map(c=>`<button class="${c[0]===st.comp?'on':''}" onclick="set({comp:'${c[0]}'})">${c[1]}</button>`).join('');
+  const w=S[semIdx(st.sem)],d=delta(st.sem,scope()),c=d.a.meta?d.a.venta/d.a.meta:null;
+  document.getElementById('bmark').innerHTML=b.logo?`<img class="blogo" src="${LOGO[b.logo]}" alt="${b.n}">${b.tag?`<div class="btag">${b.tag}</div>`:''}`:`<div class="bname">${b.id==='todas'?'Semana <b>'+w.etiqueta+'</b>':'Canal <b>Digital</b>'}</div>`;
+  document.getElementById('title').textContent=`${st.tienda?T[st.tienda].nombre+': ':''}${M(d.a.venta)} en la semana, ${P(d.v)} ${d.lbl}${st.comp!=='meta'?` y ${P(c,false)} de la meta`:''}`;
+  document.getElementById('sub').textContent=`Semana ${w.etiqueta} · ${fl(w.inicio)} al ${fl(w.fin)} de ${w.inicio.slice(0,4)}`;
+  document.getElementById('tabs').innerHTML=(st.marca==='todas'?['Performance']:TABS).map(t=>`<button class="${t===st.tab?'on':''}" onclick="set({tab:'${t}'})">${t}</button>`).join('');
+  document.getElementById('main').innerHTML=st.tab==='Performance'?performance(b):st.tab==='Ejecución'?ejecucion():st.tab==='CRM'?crm():st.tab==='Presupuesto'?presupuesto():analisis();
+  document.querySelectorAll('svg.hov [data-t]').forEach(el=>{el.addEventListener('mousemove',e=>tip(e,el.dataset.t));el.addEventListener('mouseleave',e=>tip(e,''))});
+  try{history.replaceState(null,'','#'+new URLSearchParams(st).toString())}catch(e){}
+}
+/* ===== Pestañas Ejecución, CRM, Presupuesto y Análisis ===== */
+const FOTO=(w,f)=>(PKG.img&&PKG.img[f])||('evidencias/'+w+'/'+f);
+function zm(b){const g=b.parentNode;g.querySelectorAll('.ph.big').forEach(x=>{if(x!==b)x.classList.remove('big')});b.classList.toggle('big');if(b.classList.contains('big'))b.scrollIntoView({block:'nearest',behavior:'smooth'})}
+const AS=PKG.asana,CRM=PKG.crm,BUD=PKG.budget,OLD=PKG.viejo;
+const SEC_ORDER=['Vitrinas','CRM','Redes Sociales','Pauta Digital','BTL','Activaciones','Eventos','Ecommerce','Punto de Pago','POP','Catálogo','Endomarketing','Espacios Gratis CC','Automatizadas'];
+const UNITS=['levis','levis-outlet','desigual','wiseman'];
+const brandOf=id=>BR.find(x=>x.id===id)||BR[0];
+const dotU=u=>`<span class="dot" style="background:${brandOf(u).c}"></span>`;
+const fd=s=>s?new Date(s+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}):'';
+const curW=()=>S[semIdx(st.sem)];
+const enMarca=(u,u2,s)=>st.marca==='todas'||u===st.marca||(st.marca==='digital'&&(u2==='digital'||s==='Ecommerce'||s==='Pauta Digital'));
+const asanaInWeek=(t,w)=>(!t.week||t.week===w.id)&&!(t.excludeWeeks||[]).includes(w.id)&&t.a<=w.fin&&t.b>=w.inicio;
+function card(t,body,extra=''){return `<div class="panel fade"${extra}><h3>${t}</h3>${body}</div>`}
+function kpi(l,v,s,c){return `<div class="k"><small>${l}</small><div class="v"${c?` style="color:${c}"`:''}>${v}</div><div class="s">${s||''}</div></div>`}
+function emptyBox(t,s){return `<div class="empty fade"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8a93b5" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 14h8"/></svg><div><b>${t}</b>${s}</div></div>`}
+
+/* ---------- Ejecución ---------- */
+function executionCRM(w){
+  const source=(PKG.crmCampaigns||{})[w.id]??(OLD[w.id]?.crm||[]);
+  const records=source.filter(c=>c.fecha>=w.inicio&&c.fecha<=w.fin&&enMarca(c.u,null,'CRM')).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  if(!records.length)return `<section class="crm-execution"><h3>Campañas CRM · semana ${w.etiqueta}</h3><p class="note">Sin registros de envío por canal para esta marca y semana.</p></section>`;
+  const missing=records.some(c=>c.env==null),asana=records.some(c=>c.fuente==='Asana');
+  return `<section class="crm-execution" aria-label="Campañas CRM de la semana"><h3>Campañas CRM · semana ${w.etiqueta}<span>${records.length} registros · ${fd(w.inicio)} al ${fd(w.fin)}</span></h3><div class="traffic-scroll"><table class="traffic-table num"><thead><tr><th>Campaña / canal</th><th>Fecha</th><th>Enviados</th><th>Apertura</th><th>CTOR</th><th>Conversión</th><th>Transacciones</th><th>Ingresos reportados</th></tr></thead><tbody>${records.map(c=>`<tr><th scope="row"><span class="crm-channel ${c.canal==='Email'?'email':c.canal==='SMS'?'sms':'wa'}">${esc(c.canal)}</span><span class="crm-name">${esc(c.camp)}</span><small>${c.env==null?'Resultados pendientes':''}</small></th><td title="${esc(c.fechaTipo||'Fecha de envío reportada')}">${fd(c.fecha)}</td><td>${N(c.env)}</td><td>${c.canal==='Email'?P(c.ap,false):'No aplica'}</td><td>${c.canal==='Email'?P(c.ctor,false):'No aplica'}</td><td>${P(c.conv,false)}</td><td>${N(c.tr)}</td><td>${$(c.ing)}</td></tr>`).join('')}</tbody></table></div><p class="note">${missing?'— = resultado aún no disponible. ':''}Las ventas de cada campaña son las atribuidas a ese envío; un mismo cliente puede contar en más de una campaña.</p></section>`;
+}
+const PILARES=[
+ {id:'atr',n:'Atracción',d:'Traer gente a la tienda y a la web: vitrinas, BTL, activaciones, eventos, redes y pauta.',c:'#2f6fed',s:['Vitrinas','BTL','Activaciones','Eventos','Espacios Gratis CC','Redes Sociales','Pauta Digital']},
+ {id:'cnv',n:'Conversión',d:'Que quien entra compre: punto de pago, POP, ecommerce, catálogo y equipo de tienda.',c:'#e8730c',s:['Punto de Pago','POP','Ecommerce','Catálogo','Endomarketing']},
+ {id:'fid',n:'Fidelización',d:'Que el cliente vuelva: campañas CRM por email, SMS y WhatsApp, y automatizaciones.',c:'#0f8a52',s:['CRM','Automatizadas']}];
+const ICO={atr:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',cnv:'<path d="M6 6h15l-2 9H8L6 3H3"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/>',fid:'<path d="M12 21s-7-4.4-9.3-9A5 5 0 0 1 12 6a5 5 0 0 1 9.3 6c-2.3 4.6-9.3 9-9.3 9z"/>',cmp:'<path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/>',sig:'<path d="M5 12h14M13 6l6 6-6 6"/>'};
+const pilarOf=s=>PILARES.find(p=>p.s.includes(s))||PILARES[0];
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const addD=(d,k)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+k);return x.toISOString().slice(0,10)};
+const rangoF=(a,b)=>!a&&!b?'Sin fecha':fd(a||b)+(b&&a&&b!==a?' – '+fd(b):'');
+/* Carrusel: flechas para pasar entre fotos, con el nombre de la tienda */
+function car(el,k){const c=el.closest('.car'),it=[...c.querySelectorAll('.cs')],n=it.length;let i=(+c.dataset.i+k+n)%n;c.dataset.i=i;it.forEach((x,j)=>x.classList.toggle('on',j===i));c.querySelector('.cn').textContent=(i+1)+' / '+n}
+function carrusel(w,fs,pc,icon){
+  if(!fs.length)return `<div class="acov none" style="--pc:${pc}"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">${icon}</svg></div>`;
+  const sl=fs.map((f,j)=>{const label=f.tienda||(f.tarea||'').match(/\bCC\s+(.+)$/i)?.[1]||f.tarea||'Actividad de marca';return `<figure class="cs${j?'':' on'}"><img loading="lazy" src="${FOTO(w.id,f.f)}" alt="${esc(label)}"><figcaption>${f.v?'<em>Video</em>':''}${esc(label)}</figcaption></figure>`}).join('');
+  return `<div class="acov car" data-i="0" style="--pc:${pc}">${sl}${fs.length>1?`<button class="cb prev" aria-label="Foto anterior" onclick="car(this,-1)">‹</button><button class="cb next" aria-label="Foto siguiente" onclick="car(this,1)">›</button><span class="cn">1 / ${fs.length}</span>`:''}</div>`}
+function campanasDe(a,b){return (PKG.campanas||[]).filter(c=>enMarca(c.u,null,'')&&c.a&&c.a<=b&&(c.b||c.a)>=a).sort((x,y)=>x.a.localeCompare(y.a))}
+function campCard(c,a,b,ctx){
+  const tags=[];if(c.a>=a&&c.a<=b)tags.push(ctx==='sig'?'Arranca':'Nueva esta semana');if(c.b&&c.b>=a&&c.b<=b)tags.push('Termina '+fd(c.b));
+  const det=(c.notas||'').split('\n').map(x=>x.trim()).filter(Boolean);
+  return `<article class="ccard"><div class="cch"><div>${st.marca==='todas'?`<span class="atag">${dotU(c.u)}${brandOf(c.u).n}</span>`:''}<b>${esc(c.n)}</b><small>${rangoF(c.a,c.b)}</small></div>${tags.map(t=>`<span class="ctag">${t}</span>`).join('')}</div>${det.length?`<div class="cdet${det.length>5?' clamp':''}">${det.map(l=>`<p>${esc(l).replace(/^([^:]{2,28}):/,'<b>$1:</b>')}</p>`).join('')}</div>${det.length>5?`<button class="cmore" onclick="this.previousElementSibling.classList.toggle('clamp');this.textContent=this.textContent==='Ver más'?'Ver menos':'Ver más'">Ver más</button>`:''}`:''}</article>`}
+function ejecucion(){
+  const w=curW(),o=OLD[w.id];
+  const vistos=new Set(),ts=AS.filter(t=>asanaInWeek(t,w)&&enMarca(t.u,t.u2,t.s)&&!vistos.has(t.url)&&vistos.add(t.url));
+  const FW=PKG.fotos[w.id]||[],SP=(PKG.soporte||{})[w.id]||[],mine=(t,x)=>t.url.endsWith(x.t);
+  const all=ts.map(t=>({t,fs:FW.filter(f=>mine(t,f)),cs:SP.filter(c=>mine(t,c)),pil:pilarOf(t.s)}));
+  const conFoto=all.filter(x=>x.fs.length).length,cps=campanasDe(w.inicio,w.fin);
+  let h=`<div class="exhero fade"><div class="exk"><small>Acciones de la semana</small><b class="num">${N(all.length)}</b><span>${conFoto} con registro fotográfico · ${cps.length} ${cps.length===1?'campaña activa':'campañas activas'}</span></div>${PILARES.map(p=>{const l=all.filter(x=>x.pil.id===p.id);return `<a class="exk pil" href="#pil-${p.id}" onclick="event.preventDefault();document.getElementById('pil-${p.id}')?.scrollIntoView({behavior:'smooth'})" style="--pc:${p.c}"><small><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">${ICO[p.id]}</svg>${p.n}</small><b class="num">${N(l.length)}</b><span>${l.length===1?'acción':'acciones'}</span></a>`}).join('')}</div>`;
+  if(cps.length) h+=`<section class="pilar fade" style="--pc:var(--h3)"><header><div><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">${ICO.cmp}</svg>Campañas activas en la semana</h2><p>Promociones y dinámicas comerciales vigentes en las tiendas.</p></div><span>${cps.length}</span></header><div class="cgrid">${cps.map(c=>campCard(c,w.inicio,w.fin,'act')).join('')}</div></section>`;
+  if(!all.length) h+=`<div style="margin-top:14px">${emptyBox('Sin acciones de marketing en esta semana','')}</div>`;
+  const acard=x=>{const t=x.t,camp=x.cs.find(c=>c.camp)?.camp||'';
+    return `<div class="acard">${carrusel(w,x.fs,x.pil.c,ICO[x.pil.id])}<div class="abody"><div class="atags"><span class="atag">${esc(t.s)}</span>${st.marca==='todas'?`<span class="atag">${dotU(t.u)}${brandOf(t.u).n}</span>`:''}</div><b class="atit">${esc(t.n)}</b>${camp?`<small class="acamp">Campaña: ${esc(camp)}</small>`:''}<div class="ameta"><span>${rangoF(t.a,t.b)}</span><span>${x.fs.length} ${x.fs.length===1?'registro':'registros'}</span></div></div></div>`};
+  const fila=x=>`<div class="arow"><span class="atag">${esc(x.t.s)}</span><b>${st.marca==='todas'?dotU(x.t.u):''}${esc(x.t.n)}${x.cs.find(c=>c.camp)?` <small>· ${esc(x.cs.find(c=>c.camp).camp)}</small>`:''}</b><span class="ard">${rangoF(x.t.a,x.t.b)}</span></div>`;
+  PILARES.forEach(p=>{const l=all.filter(x=>x.pil.id===p.id);
+    if(!l.length&&p.id!=='fid')return;
+    const lf=l.filter(x=>x.fs.length).sort((a,b)=>b.fs.length-a.fs.length),ln=l.filter(x=>!x.fs.length).sort((a,b)=>(a.t.a||'').localeCompare(b.t.a||''));
+    h+=`<section class="pilar fade" id="pil-${p.id}" style="--pc:${p.c}"><header><div><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">${ICO[p.id]}</svg>${p.n}</h2><p>${p.d}</p></div><span>${l.length} ${l.length===1?'acción':'acciones'}</span></header>${lf.length?`<div class="agrid">${lf.map(acard).join('')}</div>`:''}${ln.length?`<div class="alist">${ln.map(fila).join('')}</div>`:''}${p.id==='fid'?executionCRM(w):''}</section>`});
+  /* La próxima semana */
+  const na=addD(w.fin,1),nb=addD(w.fin,7),vs=new Set();
+  const prox=AS.filter(t=>enMarca(t.u,t.u2,t.s)&&t.a&&t.b&&t.a<=nb&&t.b>=na&&!vs.has(t.url)&&vs.add(t.url));
+  const nuevas=prox.filter(t=>t.a>=na),siguen=prox.filter(t=>t.a<na),cpn=campanasDe(na,nb);
+  h+=`<section class="pilar prox fade" style="--pc:#6b4fd8"><header><div><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">${ICO.sig}</svg>La próxima semana</h2><p>${fd(na)} al ${fd(nb)} · campañas y acciones ya programadas.</p></div><span>${cpn.length} ${cpn.length===1?'campaña':'campañas'} · ${nuevas.length} ${nuevas.length===1?'acción nueva':'acciones nuevas'}</span></header>`;
+  if(cpn.length) h+=`<h4 class="psub">Campañas</h4><div class="cgrid">${cpn.map(c=>campCard(c,na,nb,'sig')).join('')}</div>`;
+  if(nuevas.length) h+=`<h4 class="psub">Acciones que arrancan</h4><div class="alist">${nuevas.sort((a,b)=>a.a.localeCompare(b.a)).map(t=>`<div class="arow"><span class="atag" style="color:${pilarOf(t.s).c}">${pilarOf(t.s).n}</span><b>${st.marca==='todas'?dotU(t.u):''}${esc(t.n)} <small>· ${esc(t.s)}</small></b><span class="ard">${rangoF(t.a,t.b)}</span></div>`).join('')}</div>`;
+  if(siguen.length) h+=`<p class="note">Además continúan ${siguen.length} ${siguen.length===1?'acción':'acciones'} que ya venían en curso: ${siguen.slice(0,6).map(t=>esc(t.n)).join(' · ')}${siguen.length>6?'…':''}.</p>`;
+  if(!cpn.length&&!nuevas.length&&!siguen.length) h+=`<p class="note">Aún no hay campañas ni acciones programadas para esa semana.</p>`;
+  h+=`</section>`;
+  if(o){
+    const ev=o.ev.filter(e=>enMarca(e.u,null,''));
+    const ac=o.acc.filter(a=>enMarca(a.u,null,''));
+    if(ac.length) h+=`<div class="panel fade" style="margin-top:14px"><h3>Campañas reportadas en el comité<span>Informe semana ${w.etiqueta}</span></h3><div class="acts">${ac.map(a=>`<div class="act">${dotU(a.u)}<b>${a.t}</b><small>${[a.tipo,a.fecha].filter(Boolean).join(' · ')}</small><p>${a.d||''}</p>${a.can?`<div class="pills">${a.can.split(/,\s*/).map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}</div>`).join('')}</div></div>`;
+    if(ev.length) h+=`<div class="panel fade" style="margin-top:14px"><h3>Evidencias<span>Toca una foto para ampliarla</span></h3><div class="gal">${ev.map(e=>`<button class="ph" onclick="zm(this)"><img loading="lazy" src="https://drive.google.com/thumbnail?id=${e.id}&sz=w1200" alt="${(e.camp||'').replace(/"/g,'')}" onerror="this.parentNode.classList.add('noimg')"><span>${dotU(e.u)}${e.camp||''}${e.tipo?` · ${e.tipo}`:''}</span></button>`).join('')}</div></div>`;
+    const pa=(o.pauta||[]).filter(p=>enMarca(p.brand==='levis-outlet'?'levis-outlet':(p.brand||'').replace('levis-line','levis'),null,''));
+    if(pa.length) h+=`<div class="panel fade" style="margin-top:14px"><h3>Pauta digital<span>Informe semana ${w.etiqueta}</span></h3><div class="row h" style="grid-template-columns:1.6fr 1fr 1fr 1fr .8fr"><div>Campaña</div><div class="r">Inversión</div><div class="r">Impresiones</div><div class="r">Clics</div><div class="r">CTR</div></div>${pa.map(p=>`<div class="row num" style="grid-template-columns:1.6fr 1fr 1fr 1fr .8fr"><div>${p.campaign||''}<small style="display:block;color:#5d6688">${p.platform||p.channel||''}</small></div><div class="r">${p.spend||'—'}</div><div class="r">${N(p.impressions)}</div><div class="r">${N(p.clicks)}</div><div class="r">${P(p.ctr,false)}</div></div>`).join('')}</div>`;
+  }
+  h+=`<p class="note">Acciones de marketing ejecutadas en la semana, agrupadas por pilar. Usa las flechas para pasar entre las fotos de cada acción.</p>`;
+  return h}
+
+
+/* ---------- CRM ---------- */
+const TIPOS=[['Primera compra','#7b8cff'],['Recuperado','#f0a43a'],['Recurrente','#16a394']];
+function crmWeek(units,mon){const r=CRM.sem.filter(x=>units.includes(x[0])&&x[1]===mon);const s=i=>r.reduce((a,x)=>a+x[i],0);return {vp:s(2),vr:s(3),vc:s(4),vt:s(5),tp:s(6),tr:s(7),tc:s(8),tt:s(9),n:r.length}}
+function crmDetalle(){
+  if(st.marca==='digital')return emptyBox('El CRM se mide por marca','Los clientes se miden por marca, no por canal. Elige una marca para ver la evolución de sus clientes.');
+  const units=st.marca==='todas'?UNITS:[st.marca],w=curW(),i=semIdx(st.sem);
+  const a=crmWeek(units,w.inicio),ly=crmWeek(units,w.ly_inicio),pv=i>0?crmWeek(units,S[i-1].inicio):null;
+  if(!a.n)return emptyBox('Sin datos de clientes para esta semana','');
+  const d=v=>v==null||!isFinite(v)?'':`<span class="${v<0?'dn':'up'}">${P(v)}</span> vs. año anterior`;
+  let h=`<div class="kpis num fade">${kpi('Venta de clientes identificados',M(a.vt),d(ly.vt?a.vt/ly.vt-1:null))}${kpi('Recurrentes',P(a.vc/a.vt,false),`de la venta · ${M(a.vc)}`)}${kpi('Clientes nuevos',N(a.tp),`compras de primera vez · ${M(a.vp)}`)}${kpi('Recuperados',N(a.tr),`clientes que volvieron · ${M(a.vr)}`)}</div>`;
+  // evolución semanal apilada
+  const ws=S.slice(0,i+1).slice(-10),rows=ws.map(x=>({x,c:crmWeek(units,x.inicio)})),mx=Math.max(...rows.map(r=>r.c.vt))*1.12||1,W=720,H=220,pb=26,bw=(W-20)/rows.length;
+  let svg='';rows.forEach((r,k)=>{const cx=10+bw*k+bw/2;let y=H-pb;[[r.c.vp,0],[r.c.vr,1],[r.c.vc,2]].forEach(([v,t])=>{const hh=Math.max(0,(H-pb-12)*v/mx);y-=hh;svg+=`<rect x="${cx-bw*.3}" y="${y}" width="${bw*.6}" height="${hh}" fill="${TIPOS[t][1]}" opacity="${r.x.id===st.sem?1:.55}" data-t="Semana ${r.x.etiqueta} · ${TIPOS[t][0]}: ${M(v)}"/>`});svg+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="12" fill="#5d6688" font-weight="${r.x.id===st.sem?600:400}">${r.x.etiqueta}</text>`});
+  h+=`<div class="grid fade"><div class="panel"><h3>Venta por tipo de cliente<span>Últimas ${rows.length} semanas</span></h3><div class="legend">${TIPOS.map(t=>`<span><i style="background:${t[1]}"></i>${t[0]}</span>`).join('')}</div><svg viewBox="0 0 ${W} ${H}" width="100%" class="hov">${svg}</svg></div>`;
+  // RFM por segmento de marca (Woowup Segments · Analytics)
+  const GR=[['champions','Campeones','#0f8a52'],['loyal_customers','Clientes fieles','#16a394'],['potential_loyalists','Potenciales fieles','#5cc9a7'],['new_customers','Nuevos clientes','#7b8cff'],['promising','Prometedores','#a5b2ff'],['need_attention','Requieren atención','#f0c45a'],['about_sleep','A punto de inactivarse','#f0a43a'],['cant_lose','No puedes perderlos','#e0567a'],['at_risk','En riesgo de perderse','#d1263a'],['hibernating','Hibernando','#c4c9d9']];
+  if(st.marca==='todas'){
+    const K=[['champions','Campeones'],['loyal_customers','Fieles'],['at_risk','En riesgo'],['cant_lose','No puedes perderlos'],['hibernating','Hibernando']];
+    h+=`<div class="panel"><h3>Clientes por marca<span>Semana ${w.etiqueta}</span></h3>${UNITS.map(u=>{const c=crmWeek([u],w.inicio),l=crmWeek([u],w.ly_inicio);return `<div class="row num click" style="grid-template-columns:1.3fr 1fr .8fr .9fr" onclick="set({marca:'${u}'})"><div>${dotU(u)}${brandOf(u).n}</div><div class="r" style="font-weight:600">${M(c.vt)}</div><div class="r ${l.vt&&c.vt<l.vt?'dn':'up'}">${l.vt?P(c.vt/l.vt-1):''}</div><div class="r">${P(c.vt?c.vc/c.vt:null,false)} rec.</div></div>`}).join('')}<p class="note">Venta de clientes identificados, variación vs. año anterior y peso de los recurrentes.</p></div></div><div class="grid one fade"><div class="panel"><h3>Grupos RFM por marca<span>Clientes por grupo</span></h3><div class="row h" style="grid-template-columns:1.3fr repeat(6,1fr)"><div>Marca</div><div class="r">Base</div>${K.map(k=>`<div class="r">${k[1]}</div>`).join('')}</div>${UNITS.map(u=>{const r=CRM.rfm[u],g=Object.fromEntries(r.scoring.map(x=>[x[0],x[1]]));return `<div class="row num click" style="grid-template-columns:1.3fr repeat(6,1fr)" onclick="set({marca:'${u}'})"><div>${dotU(u)}${brandOf(u).n}</div><div class="r">${N(r.total)}</div>${K.map(k=>`<div class="r">${N(g[k[0]])}<small style="display:block;color:#5d6688">${P(g[k[0]]/r.total,false)}</small></div>`).join('')}</div>`}).join('')}<p class="note">Un cliente puede estar en más de un segmento si compró en varias marcas.</p></div></div>`;
+  } else {
+    const r=CRM.rfm[st.marca],g=Object.fromEntries(r.scoring.map(x=>[x[0],x])),hs=r.hist,prev=hs.length>1?Object.fromEntries(hs[hs.length-2][1]):null,mxr=Math.max(...r.scoring.map(x=>x[1]));
+    h+=`<div class="panel"><h3>Grupos RFM<span>Corte del ${fd(r.fecha.slice(0,10))}</span></h3>${GR.map(([k,n,c])=>{const x=g[k];if(!x)return '';const dv=prev&&prev[k]!=null?x[1]-prev[k]:null;return `<div class="rfm"><span>${n}</span><div class="bar2"><i style="width:${Math.max(1.5,x[1]/mxr*100)}%;background:${c}"></i></div><b class="num">${N(x[1])}</b><small class="num ${dv>0?'up':dv<0?'dn':''}" title="Variación vs. ${fd(hs[hs.length-2][0])}">${dv==null?'':(dv>0?'+':'')+N(dv)}</small></div>`}).join('')}<p class="note">Base ${N(r.total)} clientes · valor histórico ${M(r.ltv)} · LTV promedio ${$(r.avg)}. Variación frente a la foto del ${fd(hs[hs.length-2][0])}.</p></div></div>`;
+    // evolución mensual de la composición
+    const W=720,H=230,pb=26,bw=(W-20)/hs.length;let sv='';
+    hs.forEach(([f,sc],k)=>{const tot=sc.reduce((a,x)=>a+x[1],0)||1,m=Object.fromEntries(sc),cx=10+bw*k+bw/2;let y=H-pb;[...GR].reverse().forEach(([kk,n,c])=>{const hh=Math.max(0,(H-pb-10)*(m[kk]||0)/tot);y-=hh;sv+=`<rect x="${cx-bw*.32}" y="${y}" width="${bw*.64}" height="${hh}" fill="${c}" data-t="${new Date(f+'T12:00:00').toLocaleDateString('es-CO',{month:'short',year:'numeric'})} · ${n}: ${N(m[kk]||0)} (${P((m[kk]||0)/tot,false)})"/>`});sv+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11.5" fill="#5d6688">${new Date(f+'T12:00:00').toLocaleDateString('es-CO',{month:'short'})}</text>`});
+    const act=hs.map(([f,sc])=>{const m=Object.fromEntries(sc);return {f,v:(m.champions||0)+(m.loyal_customers||0)+(m.potential_loyalists||0)+(m.new_customers||0)+(m.promising||0)}});
+    h+=`<div class="grid fade" style="grid-template-columns:1.6fr 1fr"><div class="panel"><h3>Evolución de los segmentos RFM<span>Composición mensual</span></h3><div class="legend">${GR.map(g=>`<span><i style="background:${g[2]}"></i>${g[1]}</span>`).join('')}</div><svg viewBox="0 0 ${W} ${H}" width="100%" class="hov">${sv}</svg></div><div class="panel"><h3>Clientes activos<span>Campeones, fieles, potenciales, nuevos y prometedores</span></h3>${act.slice().reverse().map((x,k,arr)=>{const p=arr[k+1];return `<div class="row num" style="grid-template-columns:1fr 1fr .8fr"><div>${new Date(x.f+'T12:00:00').toLocaleDateString('es-CO',{month:'long',year:'numeric'})}</div><div class="r" style="font-weight:600">${N(x.v)}</div><div class="r ${p?(x.v>=p.v?'up':'dn'):''}">${p?P(x.v/p.v-1):''}</div></div>`}).join('')}</div></div>`;
+  }
+  // mensual
+  const men=[...new Set(CRM.men.map(r=>r[1]))].sort().slice(-12);
+  const mrow=m=>{const r=CRM.men.filter(x=>units.includes(x[0])&&x[1]===m),s=k=>r.reduce((a,x)=>a+x[k],0);return {vt:s(6),tt:s(7),cp:s(8),cr:s(9),cc:s(10),parcial:r.some(x=>x[2])}};
+  h+=`<div class="panel fade" style="margin-top:14px"><h3>Clientes por mes<span>Mes calendario</span></h3><div class="row h" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr"><div>Mes</div><div class="r">Venta</div><div class="r">Nuevos</div><div class="r">Recuperados</div><div class="r">Recurrentes</div><div class="r">% recurrentes</div></div>${men.slice().reverse().map(m=>{const r=mrow(m),tc=r.cp+r.cr+r.cc;return `<div class="row num" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr"><div>${new Date(m+'-15T12:00:00').toLocaleDateString('es-CO',{month:'long',year:'numeric'})}${r.parcial?' <span class="badge">parcial</span>':''}</div><div class="r">${M(r.vt)}</div><div class="r">${N(r.cp)}</div><div class="r">${N(r.cr)}</div><div class="r">${N(r.cc)}</div><div class="r">${P(tc?r.cc/tc:null,false)}</div></div>`}).join('')}</div>`;
+  // envíos de la semana
+  const o=OLD[w.id],env=o?o.crm.filter(x=>units.includes(x.u)):[];
+  const cr=AS.filter(t=>t.s==='CRM'&&asanaInWeek(t,w)&&units.includes(t.u));
+  if(env.length) h+=`<div class="panel fade" style="margin-top:14px"><h3>Envíos de la semana<span>Email, SMS y WhatsApp</span></h3><div class="sends">${env.map(x=>{const sin=!x.env;const sms=/sms|whats/i.test(x.canal||'');return `<div class="send">${st.marca==='todas'?dotU(x.u):''}<span class="pill">${x.canal||''}</span><b>${x.camp}</b><small>${fd(x.fecha)}</small>${sin?`<p class="sin">Sin datos de envío</p>`:`<div class="mets num"><div><small>Enviados</small>${N(x.env)}</div><div><small>Apertura</small>${sms?'—':P(x.ap,false)}</div><div><small>CTOR</small>${sms?'—':P(x.ctor,false)}</div><div><small>Conversión</small>${P(x.conv,false)}</div></div><div class="foot num"><span>${N(x.tr)} transacciones</span><b>${M(x.ing)}</b></div>`}</div>`}).join('')}</div><p class="note">"Sin datos de envío": la campaña no registró mensajes enviados. Los ingresos son los atribuidos a cada envío, sin deduplicar entre envíos.</p></div>`;
+  else if(cr.length) h+=`<div class="panel fade" style="margin-top:14px"><h3>Campañas CRM de la semana</h3>${cr.map(t=>`<div class="task"><span class="tn">${st.marca==='todas'?dotU(t.u):''}${t.n}</span><span class="tm"><b class="${t.ok?'ok':'open'}">${t.ok?'Completada':'En curso'}</b></span></div>`).join('')}<p class="note"></p></div>`;
+  h+=`<p class="note">Solo se cuentan clientes identificados (con datos). Primera compra: clientes que compran por primera vez; Recuperados: vuelven tras un periodo sin comprar; Recurrentes: compran de forma continua. Semanas de lunes a domingo; año anterior: misma semana retail de ${w.ly_inicio.slice(0,4)}.</p>`;
+  return h}
+
+function crmResumen(){
+  if(st.marca==='digital')return '';
+  const units=st.marca==='todas'?UNITS:[st.marca],w=curW(),i=semIdx(st.sem);
+  const a=crmWeek(units,w.inicio),pv=i>0?crmWeek(units,S[i-1].inicio):null;
+  const snaps=units.map(u=>CRM.rfm[u]).filter(Boolean);
+  const snap=k=>{const tot={};snaps.forEach(r=>{const h=r.hist[r.hist.length-1-k];if(h)h[1].forEach(([g,n])=>{tot[g]=(tot[g]||0)+n})});return tot};
+  const fecha=k=>{const r=snaps[0];const h=r&&r.hist[r.hist.length-1-k];return h?h[0]:null};
+  const s0=snap(0),s1=snap(1),sum=o=>Object.values(o).reduce((x,y)=>x+y,0);
+  const base0=sum(s0),base1=sum(s1),db=base1?base0-base1:null;
+  const riesgo=o=>(o.at_risk||0)+(o.cant_lose||0)+(o.about_sleep||0);
+  const r0=riesgo(s0),r1=riesgo(s1),dr=base1?r0-r1:null;
+  const con=x=>x&&x.vt?(x.vc+x.vr)/x.vt:null,c0=con(a),c1=con(pv);
+  const camps=((PKG.crmCampaigns||{})[w.id]??(OLD[w.id]?.crm||[])).filter(c=>c.fecha>=w.inicio&&c.fecha<=w.fin&&units.includes(c.u));
+  const conRes=camps.filter(c=>c.env!=null),ing=conRes.reduce((s,c)=>s+(c.ing||0),0),env=conRes.reduce((s,c)=>s+(c.env||0),0);
+  const canales=[...new Set(camps.map(c=>c.canal))].join(', ');
+  const sg=v=>v==null?'':v>0?'+'+N(v):N(v);
+  const card=(q,val,chg,good,lec)=>`<div class="cq ${good==null?'':good?'bien':'mal'}"><small>${q}</small><b class="num">${val}</b><span class="num">${chg}</span><p>${lec}</p></div>`;
+  const f1=fecha(1)?fd(fecha(1)):'';
+  let h=`<div class="cqgrid fade">`;
+  h+=card('¿Crece la base de clientes?',N(base0),db==null?'':`${sg(db)} desde el ${f1}`,db==null?null:db>=0,
+    db==null?'Primera foto de la base en el informe.':db>=0?`La base sumó ${N(db)} clientes identificados desde la foto anterior. Cada cliente nuevo con datos es alguien a quien podemos volver a escribirle.`:`La base perdió ${N(-db)} clientes desde la foto anterior: revisar la captura de datos en tienda.`);
+  h+=card('¿Quién nos está comprando?',P(c0,false),c1==null?'':`${c0>=c1?'▲':'▼'} desde ${P(c1,false)} la semana anterior`,c1==null?null:c0>=c1,
+    a.vt?`De cada $100 que compraron clientes identificados, $${Math.round((c0||0)*100)} vinieron de clientes que ya conocíamos (recurrentes y recuperados). Entraron ${N(a.tp)} clientes nuevos.`:'Sin datos de clientes para la semana.');
+  h+=card('¿Se nos están yendo clientes buenos?',N(r0),dr==null?'':`${sg(dr)} desde el ${f1}`,dr==null?null:dr<=0,
+    `Clientes que compraban seguido y llevan tiempo sin volver (en riesgo, a punto de inactivarse y "no podemos perderlos"). ${dr>0?'El grupo creció: son el público prioritario para una campaña de reactivación.':dr<0?'El grupo bajó: parte de ellos volvió a comprar o pasó a inactivos.':''}`);
+  h+=card('¿Qué enviamos y cuánto vendió?',camps.length?`${N(camps.length)} ${camps.length===1?'campaña':'campañas'}`:'Sin envíos',conRes.length?`${M(ing)} atribuidos`:'',conRes.length?ing>0:null,
+    camps.length?(conRes.length?`${N(env)} mensajes enviados por ${canales}, con ${M(ing)} en ventas atribuidas.`:`Enviadas por ${canales}; los resultados aún no están disponibles.`):'No hubo campañas de CRM en la semana.');
+  return h+`</div><p class="note">Base y clientes en riesgo comparados con el corte anterior${f1?' ('+f1+')':''}. Ventas atribuidas a cada envío. Un cliente puede contarse en más de una marca.</p>`}
+
+function crm(){const r=crmResumen(),d=crmDetalle();return r?r+`<details class="crmmas"><summary>Ver el detalle de clientes, segmentos y envíos</summary>${d}</details>`:d}
+
+/* ---------- Presupuesto ---------- */
+function presupuesto(){
+  if(st.marca==='digital')return emptyBox('Sin gasto asignado al canal digital','La ejecución contable viene por marca (Levi\'s, Desigual, Wiseman y Otros).');
+  const bm=st.marca==='todas'?null:(st.marca==='levis'||st.marca==='levis-outlet')?"Levi's":brandOf(st.marca).n;
+  const rows=BUD.filter(r=>!bm||r[1]===bm).map(r=>r.map((v,i)=>i===4?String(v).replace(/\bwoowup\b/gi,'plataforma CRM'):v)),tot=rows.reduce((a,r)=>a+r[5],0);
+  if(!rows.length)return emptyBox('Sin movimientos','');
+  const last=rows.reduce((a,r)=>r[0]>a?r[0]:a,''),first=rows.reduce((a,r)=>r[0]<a?r[0]:a,'9');
+  const byM={},byP={},byS={};rows.forEach(r=>{const m=r[0].slice(0,7);byM[m]=(byM[m]||0)+r[5];byP[r[2]]=(byP[r[2]]||0)+r[5];byS[r[3]||'Sin tienda']=(byS[r[3]||'Sin tienda']||0)+r[5]});
+  const ms=Object.keys(byM).sort(),mmax=Math.max(...Object.values(byM)),pv=Object.entries(byP).sort((a,b)=>b[1]-a[1]),sv=Object.entries(byS).sort((a,b)=>b[1]-a[1]);
+  const mes=curW().inicio.slice(0,7);
+  let h=`<div class="kpis num fade">${kpi('Total ejecutado',M(tot),`${fd(first)} ${first.slice(0,4)} al ${fd(last)} ${last.slice(0,4)}`)}${kpi('Mes de la semana',byM[mes]!=null?M(byM[mes]):'Sin datos',byM[mes]!=null?new Date(mes+'-15T12:00:00').toLocaleDateString('es-CO',{month:'long'}):`Última carga contable: ${fd(last)}`)}${kpi('Movimientos',N(rows.length),'Registros contables')}${kpi('Principal proveedor',M(pv[0][1]),pv[0][0])}</div>`;
+  const W=720,H=210,bw=(W-20)/ms.length;
+  h+=`<div class="grid fade"><div class="panel"><h3>Ejecución por mes<span>Valor total con IVA${bm?' · '+bm:''}</span></h3><svg viewBox="0 0 ${W} ${H}" width="100%" class="hov">${ms.map((m,k)=>{const v=byM[m],hh=Math.max(0,(H-50)*v/mmax),cx=10+bw*k+bw/2;return `<rect x="${cx-bw*.3}" y="${H-24-hh}" width="${bw*.6}" height="${hh}" rx="5" fill="${brandOf(st.marca).c}" data-t="${m}: ${M(v)}"/><text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11.5" fill="#5d6688">${new Date(m+'-15T12:00:00').toLocaleDateString('es-CO',{month:'short'})}</text><text x="${cx}" y="${H-30-hh}" text-anchor="middle" font-size="11" font-weight="600" fill="#0e1630">${(v/1e6).toFixed(0)}M</text>`}).join('')}</svg></div>
+  <div class="panel"><h3>Principales proveedores</h3>${pv.slice(0,6).map(([n,v])=>`<div class="rfm"><span title="${n}">${n}</span><div class="bar2"><i style="width:${v/pv[0][1]*100}%;background:${brandOf(st.marca).c}"></i></div><b class="num">${M(v)}</b><small class="num">${P(v/tot,false)}</small></div>`).join('')}</div></div>`;
+  h+=`<div class="grid fade"><div class="panel"><h3>Últimos movimientos</h3>${rows.slice().sort((a,b)=>b[0]<a[0]?-1:1).slice(0,12).map(r=>`<div class="row num" style="grid-template-columns:.7fr 2.2fr 1fr"><div>${fd(r[0])}</div><div>${r[4]}<small style="display:block;color:#5d6688">${r[2]}${r[3]?' · '+r[3]:''}</small></div><div class="r" style="font-weight:600">${$(r[5])}</div></div>`).join('')}</div><div class="panel"><h3>Por tienda</h3>${sv.slice(0,10).map(([n,v])=>`<div class="rfm"><span title="${n}">${n}</span><div class="bar2"><i style="width:${v/sv[0][1]*100}%"></i></div><b class="num">${M(v)}</b></div>`).join('')}</div></div>`;
+  h+=`<p class="note">Fuente: archivo de ejecución contable cargado al informe (última carga: movimientos hasta el ${fd(last)} de ${last.slice(0,4)}). ${st.marca==='levis'||st.marca==='levis-outlet'?"La contabilidad no separa Levi's Línea de Outlet. ":''}Se actualiza cuando llegue un archivo contable nuevo.</p>`;
+  return h}
+
+/* ---------- Análisis ---------- */
+function analisis(){
+  const w=curW(),i=semIdx(st.sem),ids=scope(),d=delta(st.sem,ids),a=d.a,b=brandOf(st.marca);
+  const lyv=a.lyc?a.vc/a.lyc-1:null,c=a.meta?a.venta/a.meta:null,pa=i>0?agg(S[i-1].id,ids):null;
+  const ps=[];
+  ps.push(`<p><b>${st.tienda?T[st.tienda].nombre:b.id==='todas'?'La compañía':b.n} vende ${M(a.venta)}</b>, ${P(lyv)} frente a la misma semana de ${w.ly_inicio.slice(0,4)}${pa?` y ${P(a.venta/pa.venta-1)} frente a la semana ${S[i-1].etiqueta}`:''}. Cumple el <b style="color:${col(c)}">${P(c,false)}</b> de la meta.</p>`);
+  if(!st.tienda&&st.marca!=='digital'){
+    const its=(st.marca==='todas'?BR.slice(1).map(x=>({n:x.n,ids:scope(x.id,'')})):scope().map(id=>({n:T[id].nombre,ids:[id]}))).map(x=>{const y=agg(st.sem,x.ids);return {...x,y,c:y.meta?y.venta/y.meta:null,v:y.lyc?y.vc/y.lyc-1:null}}).filter(x=>x.y.venta>0&&x.c!=null);
+    if(its.length>1){const s=[...its].sort((p,q)=>q.c-p.c);ps.push(`<p><b>Mejor cumplimiento: ${s[0].n}</b> (${P(s[0].c,false)}${s[0].v!=null?`, ${P(s[0].v)} vs. año anterior`:''}). <b>Más rezagada: ${s[s.length-1].n}</b> (${P(s[s.length-1].c,false)}${s[s.length-1].v!=null?`, ${P(s[s.length-1].v)} vs. año anterior`:''}).</p>`)}
+  }
+  if(st.marca==='digital'&&a.ses)ps.push(`<p><b>${N(a.ses)} sesiones en la web</b>${pa&&pa.ses?` (${P(a.ses/pa.ses-1)} vs. semana anterior)`:''} con conversión de ${P(a.chk/a.ses,false)}.</p>`);
+  else if(a.traf){const cv=a.ftraf/a.traf,pcv=pa&&pa.traf?pa.ftraf/pa.traf:null;ps.push(`<p><b>${N(a.traf)} ingresos a tienda</b>${pa&&pa.traf?` (${P(a.traf/pa.traf-1)} vs. semana anterior)`:''}; la conversión es ${P(cv,false)}${pcv?` frente a ${P(pcv,false)} la semana pasada`:''}.</p>`)}
+  if(st.marca!=='digital'&&!st.tienda){const u=st.marca==='todas'?UNITS:[st.marca],cw=crmWeek(u,w.inicio);if(cw.vt)ps.push(`<p><b>Clientes:</b> los recurrentes aportan ${P(cw.vc/cw.vt,false)} de la venta identificada; ${N(cw.tp)} compras fueron de clientes nuevos y ${N(cw.tr)} de clientes recuperados.</p>`)}
+  const cs=AS.filter(t=>t.s==='CRM'&&asanaInWeek(t,w)&&(st.marca==='todas'||t.u===st.marca)).map(t=>t.n.replace(/^CRM\s*(Levi's|Desigual|Wiseman)?\s*-?\s*/i,'').replace(/\s*-?\s*Sem\s*\d+\.\d.*$/i,'').trim());
+  if(cs.length)ps.push(`<p><b>Campañas de la semana:</b> ${[...new Set(cs)].join(' · ')}.</p>`);
+  let h=`<div class="grid fade"><div class="panel read"><h3>Lectura de la semana<span>Generada con los datos del informe</span></h3>${ps.join('')}</div>`;
+  const o=OLD[w.id],an=o&&o.an[st.marca==='digital'?'x':st.marca];
+  h+=an&&(an.tit||an.lec)?`<div class="panel read"><h3>Lectura presentada en el comité<span>Semana ${w.etiqueta}</span></h3>${an.tit?`<p><b>${an.tit}</b></p>`:''}<p>${an.lec}</p>${an.pri?`<p><b>${an.pri}</b></p>`:''}</div></div>`:`<div class="panel read"><h3>Prioridades<span>Para el comité</span></h3>${prioridades(a,c,lyv)}</div></div>`;
+  return h}
+function prioridades(a,c,lyv){
+  const l=[];if(c!=null&&c<.7)l.push('Cumplimiento por debajo del 70%: revisar surtido, tallas y cierre comercial.');else if(c!=null&&c<.95)l.push('Cerca de la meta: sostener disponibilidad y empuje comercial el fin de semana.');else if(c!=null)l.push('Meta cumplida: replicar las acciones que funcionaron.');
+  if(lyv!=null&&lyv<0)l.push('Venta por debajo del año anterior: identificar tiendas y categorías que explican la caída.');
+  if(a.traf&&a.ext&&a.traf/a.ext<.04)l.push('Captura de tráfico baja: reforzar vitrina y actividades en punto de venta.');
+  return l.length?l.map(x=>`<p>${x}</p>`).join(''):'<p>Sin alertas para esta selección.</p>'}
+
+function set(o){const m=o.marca&&o.marca!==st.marca;if(m&&!o.tab)o.tab=o.marca==='todas'?'Performance':'Ejecución';Object.assign(st,o);render();if(m)scrollTo({top:0,behavior:'smooth'})}
+document.getElementById('fSem').onchange=e=>set({sem:e.target.value});
+document.getElementById('fTienda').onchange=e=>set({tienda:e.target.value});
+document.getElementById('ublogo').src=LOGO.ub;
+render();
+</script>
+</body>
+</html>
