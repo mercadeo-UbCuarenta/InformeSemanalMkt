@@ -462,7 +462,7 @@ const rangoF=(a,b)=>!a&&!b?'Sin fecha':fd(a||b)+(b&&a&&b!==a?' – '+fd(b):'');
 function car(el,k){const c=el.closest('.car'),it=[...c.querySelectorAll('.cs')],n=it.length;let i=(+c.dataset.i+k+n)%n;c.dataset.i=i;it.forEach((x,j)=>x.classList.toggle('on',j===i));c.querySelector('.cn').textContent=(i+1)+' / '+n}
 function carrusel(w,fs,pc,icon){
   if(!fs.length)return `<div class="acov none" style="--pc:${pc}"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">${icon}</svg></div>`;
-  const sl=fs.map((f,j)=>`<figure class="cs${j?'':' on'}"><img loading="lazy" src="${FOTO(w.id,f.f)}" alt="${esc(f.tienda||'')}">${f.tienda||f.v?`<figcaption>${f.v?'<em>Video</em>':''}${esc(f.tienda||'')}</figcaption>`:''}</figure>`).join('');
+  const sl=fs.map((f,j)=>{const label=f.tienda||(f.tarea||'').match(/\bCC\s+(.+)$/i)?.[1]||f.tarea||'Actividad de marca';return `<figure class="cs${j?'':' on'}"><img loading="lazy" src="${FOTO(w.id,f.f)}" alt="${esc(label)}"><figcaption>${f.v?'<em>Video</em>':''}${esc(label)}</figcaption></figure>`}).join('');
   return `<div class="acov car" data-i="0" style="--pc:${pc}">${sl}${fs.length>1?`<button class="cb prev" aria-label="Foto anterior" onclick="car(this,-1)">‹</button><button class="cb next" aria-label="Foto siguiente" onclick="car(this,1)">›</button><span class="cn">1 / ${fs.length}</span>`:''}</div>`}
 function campanasDe(a,b){return (PKG.campanas||[]).filter(c=>enMarca(c.u,null,'')&&c.a&&c.a<=b&&(c.b||c.a)>=a).sort((x,y)=>x.a.localeCompare(y.a))}
 function campCard(c,a,b,ctx){
@@ -582,7 +582,7 @@ function crm(){const r=crmResumen(),d=crmDetalle();return r?r+`<details class="c
 function presupuesto(){
   if(st.marca==='digital')return emptyBox('Sin gasto asignado al canal digital','La ejecución contable viene por marca (Levi\'s, Desigual, Wiseman y Otros).');
   const bm=st.marca==='todas'?null:(st.marca==='levis'||st.marca==='levis-outlet')?"Levi's":brandOf(st.marca).n;
-  const rows=BUD.filter(r=>!bm||r[1]===bm),tot=rows.reduce((a,r)=>a+r[5],0);
+  const rows=BUD.filter(r=>!bm||r[1]===bm).map(r=>r.map((v,i)=>i===4?String(v).replace(/\bwoowup\b/gi,'plataforma CRM'):v)),tot=rows.reduce((a,r)=>a+r[5],0);
   if(!rows.length)return emptyBox('Sin movimientos','');
   const last=rows.reduce((a,r)=>r[0]>a?r[0]:a,''),first=rows.reduce((a,r)=>r[0]<a?r[0]:a,'9');
   const byM={},byP={},byS={};rows.forEach(r=>{const m=r[0].slice(0,7);byM[m]=(byM[m]||0)+r[5];byP[r[2]]=(byP[r[2]]||0)+r[5];byS[r[3]||'Sin tienda']=(byS[r[3]||'Sin tienda']||0)+r[5]});
@@ -621,7 +621,7 @@ function prioridades(a,c,lyv){
   if(a.traf&&a.ext&&a.traf/a.ext<.04)l.push('Captura de tráfico baja: reforzar vitrina y actividades en punto de venta.');
   return l.length?l.map(x=>`<p>${x}</p>`).join(''):'<p>Sin alertas para esta selección.</p>'}
 
-function set(o){const m=o.marca&&o.marca!==st.marca;if(m&&st.marca==='todas'&&o.marca!=='todas'&&!o.tab)o.tab='Ejecución';Object.assign(st,o);render();if(m)scrollTo({top:0,behavior:'smooth'})}
+function set(o){const m=o.marca&&o.marca!==st.marca;if(m&&!o.tab)o.tab=o.marca==='todas'?'Performance':'Ejecución';Object.assign(st,o);render();if(m)scrollTo({top:0,behavior:'smooth'})}
 document.getElementById('fSem').onchange=e=>set({sem:e.target.value});
 document.getElementById('fTienda').onchange=e=>set({tienda:e.target.value});
 document.getElementById('ublogo').src=LOGO.ub;
