@@ -156,6 +156,7 @@ svg text{font-family:Sora,sans-serif}
 .fade{animation:fade .35s ease}@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (max-width:980px){.sgrid{grid-template-columns:1fr}.rfm{grid-template-columns:110px 1fr 60px 44px}.mets{grid-template-columns:repeat(2,1fr)}.filters{position:static}.chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.f:has(.chips){flex:1 1 100%;min-width:0;order:-1}.kpis{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.row{grid-template-columns:1.4fr 1fr .9fr .8fr}.row .hide{display:none}
   .hero h1{font-size:25px}.bname{font-size:34px}.tabs .seg{display:flex;overflow-x:auto;max-width:100%}.filters .logo{display:none}.sel{min-width:0;width:100%}.f{flex:1 1 140px}}
+@media(max-width:420px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis .k{min-width:0;padding:12px;overflow-wrap:anywhere}.kpis .k .v{font-size:22px;letter-spacing:0}}
 @media print{.filters,.tabs{display:none}.hero{padding-bottom:40px}main{margin-top:10px}.k,.panel{box-shadow:none;break-inside:avoid}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
@@ -462,7 +463,7 @@ const rangoF=(a,b)=>!a&&!b?'Sin fecha':fd(a||b)+(b&&a&&b!==a?' – '+fd(b):'');
 function car(el,k){const c=el.closest('.car'),it=[...c.querySelectorAll('.cs')],n=it.length;let i=(+c.dataset.i+k+n)%n;c.dataset.i=i;it.forEach((x,j)=>x.classList.toggle('on',j===i));c.querySelector('.cn').textContent=(i+1)+' / '+n}
 function carrusel(w,fs,pc,icon){
   if(!fs.length)return `<div class="acov none" style="--pc:${pc}"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">${icon}</svg></div>`;
-  const sl=fs.map((f,j)=>{const label=f.tienda||(f.tarea||'').match(/\bCC\s+(.+)$/i)?.[1]||f.tarea||'Actividad de marca';return `<figure class="cs${j?'':' on'}"><img loading="lazy" src="${FOTO(w.id,f.f)}" alt="${esc(label)}"><figcaption>${f.v?'<em>Video</em>':''}${esc(label)}</figcaption></figure>`}).join('');
+  const sl=fs.map((f,j)=>{const label=f.tienda||(f.tarea||'').match(/\bCC\s+(.+)$/i)?.[1]||f.tarea||'Actividad de marca';const campaign=w.id==='2026-10.5'&&f.sub&&f.sub!==f.tarea?` · ${esc(f.sub)}`:'';return `<figure class="cs${j?'':' on'}"><img loading="lazy" src="${FOTO(w.id,f.f)}" alt="${esc(label)}"><figcaption>${f.v?'<em>Video</em>':''}${esc(label)}${campaign}</figcaption></figure>`}).join('');
   return `<div class="acov car" data-i="0" style="--pc:${pc}">${sl}${fs.length>1?`<button class="cb prev" aria-label="Foto anterior" onclick="car(this,-1)">‹</button><button class="cb next" aria-label="Foto siguiente" onclick="car(this,1)">›</button><span class="cn">1 / ${fs.length}</span>`:''}</div>`}
 function campanasDe(a,b){return (PKG.campanas||[]).filter(c=>enMarca(c.u,null,'')&&c.a&&c.a<=b&&(c.b||c.a)>=a).sort((x,y)=>x.a.localeCompare(y.a))}
 function campCard(c,a,b,ctx){
@@ -478,7 +479,7 @@ function ejecucion(){
   let h=`<div class="exhero fade"><div class="exk"><small>Acciones de la semana</small><b class="num">${N(all.length)}</b><span>${conFoto} con registro fotográfico · ${cps.length} ${cps.length===1?'campaña activa':'campañas activas'}</span></div>${PILARES.map(p=>{const l=all.filter(x=>x.pil.id===p.id);return `<a class="exk pil" href="#pil-${p.id}" onclick="event.preventDefault();document.getElementById('pil-${p.id}')?.scrollIntoView({behavior:'smooth'})" style="--pc:${p.c}"><small><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">${ICO[p.id]}</svg>${p.n}</small><b class="num">${N(l.length)}</b><span>${l.length===1?'acción':'acciones'}</span></a>`}).join('')}</div>`;
   if(cps.length) h+=`<section class="pilar fade" style="--pc:var(--h3)"><header><div><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">${ICO.cmp}</svg>Campañas activas en la semana</h2><p>Promociones y dinámicas comerciales vigentes en las tiendas.</p></div><span>${cps.length}</span></header><div class="cgrid">${cps.map(c=>campCard(c,w.inicio,w.fin,'act')).join('')}</div></section>`;
   if(!all.length) h+=`<div style="margin-top:14px">${emptyBox('Sin acciones de marketing en esta semana','')}</div>`;
-  const acard=x=>{const t=x.t,camp=x.cs.find(c=>c.camp)?.camp||'';
+  const acard=x=>{const t=x.t,camp=w.id==='2026-10.5'?[...new Set(x.cs.map(c=>c.camp).filter(Boolean))].join(' / '):x.cs.find(c=>c.camp)?.camp||'';
     return `<div class="acard">${carrusel(w,x.fs,x.pil.c,ICO[x.pil.id])}<div class="abody"><div class="atags"><span class="atag">${esc(t.s)}</span>${st.marca==='todas'?`<span class="atag">${dotU(t.u)}${brandOf(t.u).n}</span>`:''}</div><b class="atit">${esc(t.n)}</b>${camp?`<small class="acamp">Campaña: ${esc(camp)}</small>`:''}<div class="ameta"><span>${rangoF(t.a,t.b)}</span><span>${x.fs.length} ${x.fs.length===1?'registro':'registros'}</span></div></div></div>`};
   const fila=x=>`<div class="arow"><span class="atag">${esc(x.t.s)}</span><b>${st.marca==='todas'?dotU(x.t.u):''}${esc(x.t.n)}${x.cs.find(c=>c.camp)?` <small>· ${esc(x.cs.find(c=>c.camp).camp)}</small>`:''}</b><span class="ard">${rangoF(x.t.a,x.t.b)}</span></div>`;
   PILARES.forEach(p=>{const l=all.filter(x=>x.pil.id===p.id);
@@ -580,8 +581,8 @@ function crm(){const r=crmResumen(),d=crmDetalle();return r?r+`<details class="c
 
 /* ---------- Presupuesto ---------- */
 function presupuesto(){
-  if(st.marca==='digital')return emptyBox('Sin gasto asignado al canal digital','La ejecución contable viene por marca (Levi\'s, Desigual, Wiseman y Otros).');
-  const bm=st.marca==='todas'?null:(st.marca==='levis'||st.marca==='levis-outlet')?"Levi's":brandOf(st.marca).n;
+  if(st.marca==='digital')return emptyBox('Sin gasto asignado al canal digital','La ejecución contable viene por marca (Levi\'s Línea, Levi\'s Outlet, Desigual, Wiseman y Otros).');
+  const bm=st.marca==='todas'?null:st.marca==='levis'?"Levi's":st.marca==='levis-outlet'?"Levi's Outlet":brandOf(st.marca).n;
   const rows=BUD.filter(r=>!bm||r[1]===bm).map(r=>r.map((v,i)=>i===4?String(v).replace(/\bwoowup\b/gi,'plataforma CRM'):v)),tot=rows.reduce((a,r)=>a+r[5],0);
   if(!rows.length)return emptyBox('Sin movimientos','');
   const last=rows.reduce((a,r)=>r[0]>a?r[0]:a,''),first=rows.reduce((a,r)=>r[0]<a?r[0]:a,'9');
