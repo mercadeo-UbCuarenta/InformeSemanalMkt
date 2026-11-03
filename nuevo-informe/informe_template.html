@@ -435,7 +435,7 @@ const brandOf=id=>BR.find(x=>x.id===id)||BR[0];
 const dotU=u=>`<span class="dot" style="background:${brandOf(u).c}"></span>`;
 const fd=s=>s?new Date(s+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}):'';
 const curW=()=>S[semIdx(st.sem)];
-const enMarca=(u,u2,s)=>st.marca==='todas'||u===st.marca||(st.marca==='digital'&&(u2==='digital'||s==='Ecommerce'||s==='Pauta Digital'));
+const enMarca=(u,u2,s)=>st.marca==='todas'||u===st.marca||(Array.isArray(u2)&&u2.includes(st.marca))||(st.marca==='digital'&&(u2==='digital'||s==='Ecommerce'||s==='Pauta Digital'));
 const asanaInWeek=(t,w)=>(!t.week||t.week===w.id)&&!(t.excludeWeeks||[]).includes(w.id)&&t.a<=w.fin&&t.b>=w.inicio;
 function card(t,body,extra=''){return `<div class="panel fade"${extra}><h3>${t}</h3>${body}</div>`}
 function kpi(l,v,s,c){return `<div class="k"><small>${l}</small><div class="v"${c?` style="color:${c}"`:''}>${v}</div><div class="s">${s||''}</div></div>`}
@@ -582,7 +582,8 @@ function crm(){const r=crmResumen(),d=crmDetalle();return r?r+`<details class="c
 /* ---------- Presupuesto ---------- */
 function presupuesto(){
   if(st.marca==='digital')return emptyBox('Sin gasto asignado al canal digital','La ejecución contable viene por marca (Levi\'s Línea, Levi\'s Outlet, Desigual, Wiseman y Otros).');
-  const bm=st.marca==='todas'?null:st.marca==='levis'?"Levi's":st.marca==='levis-outlet'?"Levi's Outlet":brandOf(st.marca).n;
+  const separateOutlet=BUD.some(r=>r[1]==="Levi's Outlet");
+  const bm=st.marca==='todas'?null:st.marca==='levis'?"Levi's":st.marca==='levis-outlet'?(separateOutlet?"Levi's Outlet":"Levi's"):brandOf(st.marca).n;
   const rows=BUD.filter(r=>!bm||r[1]===bm).map(r=>r.map((v,i)=>i===4?String(v).replace(/\bwoowup\b/gi,'plataforma CRM'):v)),tot=rows.reduce((a,r)=>a+r[5],0);
   if(!rows.length)return emptyBox('Sin movimientos','');
   const last=rows.reduce((a,r)=>r[0]>a?r[0]:a,''),first=rows.reduce((a,r)=>r[0]<a?r[0]:a,'9');
@@ -594,7 +595,7 @@ function presupuesto(){
   h+=`<div class="grid fade"><div class="panel"><h3>Ejecución por mes<span>Valor total con IVA${bm?' · '+bm:''}</span></h3><svg viewBox="0 0 ${W} ${H}" width="100%" class="hov">${ms.map((m,k)=>{const v=byM[m],hh=Math.max(0,(H-50)*v/mmax),cx=10+bw*k+bw/2;return `<rect x="${cx-bw*.3}" y="${H-24-hh}" width="${bw*.6}" height="${hh}" rx="5" fill="${brandOf(st.marca).c}" data-t="${m}: ${M(v)}"/><text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11.5" fill="#5d6688">${new Date(m+'-15T12:00:00').toLocaleDateString('es-CO',{month:'short'})}</text><text x="${cx}" y="${H-30-hh}" text-anchor="middle" font-size="11" font-weight="600" fill="#0e1630">${(v/1e6).toFixed(0)}M</text>`}).join('')}</svg></div>
   <div class="panel"><h3>Principales proveedores</h3>${pv.slice(0,6).map(([n,v])=>`<div class="rfm"><span title="${n}">${n}</span><div class="bar2"><i style="width:${v/pv[0][1]*100}%;background:${brandOf(st.marca).c}"></i></div><b class="num">${M(v)}</b><small class="num">${P(v/tot,false)}</small></div>`).join('')}</div></div>`;
   h+=`<div class="grid fade"><div class="panel"><h3>Últimos movimientos</h3>${rows.slice().sort((a,b)=>b[0]<a[0]?-1:1).slice(0,12).map(r=>`<div class="row num" style="grid-template-columns:.7fr 2.2fr 1fr"><div>${fd(r[0])}</div><div>${r[4]}<small style="display:block;color:#5d6688">${r[2]}${r[3]?' · '+r[3]:''}</small></div><div class="r" style="font-weight:600">${$(r[5])}</div></div>`).join('')}</div><div class="panel"><h3>Por tienda</h3>${sv.slice(0,10).map(([n,v])=>`<div class="rfm"><span title="${n}">${n}</span><div class="bar2"><i style="width:${v/sv[0][1]*100}%"></i></div><b class="num">${M(v)}</b></div>`).join('')}</div></div>`;
-  h+=`<p class="note">Fuente: archivo de ejecución contable cargado al informe (última carga: movimientos hasta el ${fd(last)} de ${last.slice(0,4)}). ${st.marca==='levis'||st.marca==='levis-outlet'?"La contabilidad no separa Levi's Línea de Outlet. ":''}Se actualiza cuando llegue un archivo contable nuevo.</p>`;
+  h+=`<p class="note">Fuente: archivo de ejecución contable cargado al informe (última carga: movimientos hasta el ${fd(last)} de ${last.slice(0,4)}). ${!separateOutlet&&(st.marca==='levis'||st.marca==='levis-outlet')?"La contabilidad no separa Levi's Línea de Outlet. ":''}Se actualiza cuando llegue un archivo contable nuevo.</p>`;
   return h}
 
 /* ---------- Análisis ---------- */
