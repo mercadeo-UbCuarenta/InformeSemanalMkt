@@ -36,7 +36,8 @@ Debe terminar en `fotos faltantes: 0`.
 
 ## Reglas de datos (las aplica Claude; tú solo verifica)
 - Semana retail lunes–domingo; pertenece al mes de su jueves. Comparativo: misma semana retail del año anterior.
-- Venta: Mahalo (Levi's, Wiseman, canal digital) y HIOPOS (Desigual). Desigual Acqua excluida.
+- Venta: Mahalo (Levi's, Wiseman, canal digital) y HIOPOS (Desigual). Desigual Acqua entra en el total desde la semana 11.3 y queda fuera de las tiendas comparables.
+- Variación vs. año anterior: se muestran dos cifras, el total y las tiendas comparables (solo tiendas con venta en la misma semana del año anterior).
 - Tráfico: exterior, interno y captura de tiendas. Canal digital: sesiones de la tienda online.
 - Meta y año anterior: SEGUIMIENTO PV de cada mes.
 - Nunca subir a Git exports con datos de clientes, tokens ni contraseñas.
